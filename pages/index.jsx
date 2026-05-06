@@ -2,44 +2,36 @@ import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 
 const B = {
-  cobalt:       "#2048C8",
-  cobaltDark:   "#0F2F8C",
-  cobaltBright: "#4A74F5",
-  banana:       "#FCF1B8",
-  carbon:       "#0B0B0D",
-  snow:         "#FAF9F6",
-  cream:        "#F2EAD8",
-  red:          "#E03333",
-  amber:        "#D97706",
-  green:        "#16A34A",
+  cobalt: "#2048C8", cobaltDark: "#0F2F8C", cobaltBright: "#4A74F5",
+  banana: "#FCF1B8", carbon: "#0B0B0D", snow: "#FAF9F6", cream: "#F2EAD8",
+  red: "#E03333", amber: "#D97706", green: "#16A34A",
 };
-
 const cobaltA = (a) => `rgba(32,72,200,${a})`;
 const bananaA = (a) => `rgba(252,241,184,${a})`;
 const whiteA  = (a) => `rgba(255,255,255,${a})`;
-const carbonA = (a) => `rgba(11,11,13,${a})`;
 
 const F = {
   display: "'Lato',system-ui,sans-serif",
-  ui:      "'Archivo',system-ui,sans-serif",
-  body:    "'Lato',system-ui,sans-serif",
-  mono:    "'Lato',system-ui,sans-serif",
+  ui: "'Archivo',system-ui,sans-serif",
+  body: "'Lato',system-ui,sans-serif",
+  mono: "'Lato',system-ui,sans-serif",
 };
 
 const ST = {
   deploy:  { bg: cobaltA(0.18), br: cobaltA(0.5),  tx: B.cobaltBright },
   high:    { bg: "rgba(217,119,6,0.12)",  br: "rgba(217,119,6,0.4)",  tx: "#F59E0B" },
   critical:{ bg: "rgba(224,51,51,0.1)",   br: "rgba(224,51,51,0.4)",  tx: "#F87171" },
-  watch:   { bg: bananaA(0.08),  br: bananaA(0.25), tx: B.banana },
+  watch:   { bg: bananaA(0.08), br: bananaA(0.25),  tx: B.banana },
   done:    { bg: "rgba(22,163,74,0.08)",  br: "rgba(22,163,74,0.3)",  tx: "#4ADE80" },
-  monitor: { bg: whiteA(0.03),   br: whiteA(0.08),  tx: whiteA(0.35) },
-  kickoff: { bg: cobaltA(0.1),   br: cobaltA(0.3),  tx: B.cobaltBright },
-  prep:    { bg: cobaltA(0.07),  br: cobaltA(0.2),  tx: B.cobaltBright },
+  monitor: { bg: whiteA(0.03),  br: whiteA(0.08),   tx: whiteA(0.35) },
+  kickoff: { bg: cobaltA(0.1),  br: cobaltA(0.3),   tx: B.cobaltBright },
+  prep:    { bg: cobaltA(0.07), br: cobaltA(0.2),   tx: B.cobaltBright },
   blocked: { bg: "rgba(224,51,51,0.08)",  br: "rgba(224,51,51,0.3)",  tx: "#F87171" },
 };
 const sc = s => ST[s] || ST.monitor;
 
-const BRANDS = [
+// ── Default data (fallback if no live data from Make) ─────────────────────────
+const DEFAULT_BRANDS = [
   { id:"upful-blends",         name:"Upful Blends",         notionId:"2e172853cd8c808c9550c0525bbf0b4f", contact:"Chantel",       since:"Aug 2025", slack:"External-UpfulBlends",            todayStatus:"deploy",  focus:"Deploying today — RealOnes. No QA or schedule status confirmed. Verify immediately." },
   { id:"les-belles",           name:"Les Belles",            notionId:"2da72853cd8c80ebb7c4e472cf04b984", contact:"Cecile",        since:"Aug 2025", slack:"#external-lesbelles",             todayStatus:"high",    focus:"3 sends this week. Mother's Day offer [PLACEHOLDER] unfilled 13 days — ESCALATE. DressesThatDoEverything deploys today." },
   { id:"love-your-melon",      name:"Love Your Melon",       notionId:"2e272853cd8c8071884aec842f3f0b90", contact:"Zach",          since:"Jan 2026", slack:"External-loveyourmelon",           todayStatus:"watch",   focus:"BA + AC designs complete. Pending Zach approval. Welcome series (2 emails) kicking off." },
@@ -49,9 +41,7 @@ const BRANDS = [
   { id:"legacy-funded-futures",name:"Legacy Funded Futures", notionId:"32c72853cd8c800fb962d0e9bbc55291", contact:"Andrew Pires", since:"Mar 2026", slack:"#external-lff-caechet-retention", todayStatus:"monitor", focus:"Active account. No campaign data surfaced this cycle. Verify production status." },
 ];
 
-const DATE_LABEL = new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}).toUpperCase();
-
-const WEEKLY=[
+const DEFAULT_WEEKLY = [
   {day:"MON 5/4",  brand:"Sweet Honey Farm",sub:"BCD",  name:"BCD_05.04.26_WhatHappensBehindClosedDoors_Members",type:"EMAIL",   s:"done",    note:"Deployed. Klaviyo · Leads"},
   {day:"TUE 5/5",  brand:"Hoodville",       sub:"",     name:"05.05.2026_HV_TheCookoutEdit_Caechet",             type:"EMAIL",   s:"done",    note:"Deployed. Flash sale 25% OFF"},
   {day:"WED 5/6",  brand:"Upful Blends",    sub:"",     name:"UB_05.06.26_RealOnes_Caechet",                     type:"EMAIL",   s:"deploy",  note:"Confirm QA + schedule NOW"},
@@ -65,13 +55,13 @@ const WEEKLY=[
   {day:"SUN 5/10", brand:"Les Belles",      sub:"",     name:"LB_05.10.26_MothersDayLastChance",                 type:"EMAIL",   s:"prep",    note:"Cascades from Promo #1"},
 ];
 
-const APPROVALS=[
+const DEFAULT_APPROVALS = [
   {brand:"Les Belles",      asset:"Mother's Day Offer (Promo #1 · May 8)",    sent:"—", since:"Placeholder since Apr 23 · 13 days", fu:"ESCALATE NOW"},
   {brand:"Les Belles",      asset:"Memorial Day Offer (May 22–26)",           sent:"—", since:"Unfilled in calendar",               fu:"Needed this week"},
   {brand:"Love Your Melon", asset:"Browse Abandonment + Abandoned Cart Flows",sent:"Designs complete", since:"Awaiting Zach",       fu:"Follow up today"},
 ];
 
-const BLOCKERS=[
+const DEFAULT_BLOCKERS = [
   {u:"critical",t:"Upful Blends RealOnes: No status in workspace. Confirmed send day. Verify QA + schedule immediately."},
   {u:"critical",t:"Les Belles Mother's Day Offer: [OFFER PLACEHOLDER] empty 13 days. Promo #1 is May 8. Copy fully blocked. Escalate to client now."},
   {u:"high",    t:"Les Belles May 10 Last Chance: Cascades from Promo #1. Two sends at risk if offer not confirmed today."},
@@ -81,37 +71,46 @@ const BLOCKERS=[
   {u:"prep",    t:"Natural Blessings migration (Klaviyo to Privy): Kicking off. Audit existing flows before any rebuild."},
 ];
 
-const MUST_WINS=[
+const DEFAULT_MUST_WINS = [
   "Confirm and deploy UB_05.06.26_RealOnes_Caechet — QA, code, schedule confirmed before noon.",
   "Deploy LB_05.06.26_DressesThatDoEverything — confirm QA complete and send time.",
   "Get Les Belles Mother's Day offer confirmed from client. 13 days empty. Two sends cascade if this slips.",
 ];
 
-const uid = () => Math.random().toString(36).slice(2,9);
-const todayStr = () => new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-
+// ── Shared storage via API (persists across devices/team members) ─────────────
 async function safeGet(k) {
+  if (typeof window === "undefined") return null;
   try {
-    if (typeof window === "undefined") return null;
-    const v = localStorage.getItem(k);
-    return v ? JSON.parse(v) : null;
+    const res = await fetch(`/api/shared-storage?key=${encodeURIComponent(k)}`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    return d.value ? JSON.parse(d.value) : null;
   } catch { return null; }
 }
+
 async function safeSet(k, v) {
+  if (typeof window === "undefined") return;
   try {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(k, JSON.stringify(v));
+    await fetch(`/api/shared-storage?key=${encodeURIComponent(k)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: JSON.stringify(v) }),
+    });
   } catch {}
 }
 
+// ── Notion comment via backend API ────────────────────────────────────────────
+const todayStr = () => new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+
 async function postCommentToNotion(brand, comment) {
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 1000,
-        messages: [{ role: "user", content: `Add a standup comment to the Notion page for "${brand.name}" (page ID: "${brand.notionId}"). Use notion-create-comment to post: "STANDUP ${todayStr()}: ${comment}"` }],
-        mcp_servers: [{ type: "url", url: "https://mcp.notion.com/mcp", name: "notion" }]
-      })
+    const res = await fetch("/api/notion-comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pageId: brand.notionId,
+        comment: `STANDUP ${todayStr()}: ${comment}`,
+      }),
     });
     return res.ok;
   } catch { return false; }
@@ -119,95 +118,21 @@ async function postCommentToNotion(brand, comment) {
 
 async function addNoteToNotionTask(taskName, note) {
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 1000,
-        messages: [{ role: "user", content: `Search for the Notion page named "${taskName}" and add this standup note as a comment: "${note}" - added on ${todayStr()}. Use notion-search then notion-create-comment.` }],
-        mcp_servers: [{ type: "url", url: "https://mcp.notion.com/mcp", name: "notion" }]
-      })
+    const res = await fetch("/api/notion-comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        searchQuery: taskName,
+        comment: `STANDUP NOTE ${todayStr()}: ${note}`,
+      }),
     });
     return res.ok;
   } catch { return false; }
 }
 
-function SectionNotes({ storageKey, selectItems, itemLabel = "Task" }) {
-  const [notes, setNotes] = useState([]);
-  const [input, setInput] = useState("");
-  const [selected, setSelected] = useState("");
-  const [syncing, setSyncing] = useState(null);
-  const [syncSt, setSyncSt] = useState({});
+const uid = () => Math.random().toString(36).slice(2, 9);
 
-  useEffect(() => {
-    safeGet(storageKey).then(v => { if (v) setNotes(v); });
-    if (selectItems.length) setSelected(selectItems[0].value);
-  }, [storageKey]);
-
-  const save = useCallback(async nv => { setNotes(nv); await safeSet(storageKey, nv); }, [storageKey]);
-
-  const add = async () => {
-    if (!input.trim() || !selected) return;
-    const item = selectItems.find(i => i.value === selected);
-    const id = uid();
-    setSyncing(id);
-    setSyncSt(p => ({ ...p, [id]: "syncing" }));
-    const ok = await addNoteToNotionTask(selected, input.trim());
-    const newNote = { id, taskName: selected, taskLabel: item?.label || selected, text: input.trim(), date: todayStr(), synced: ok };
-    await save([...notes, newNote]);
-    setSyncSt(p => ({ ...p, [id]: ok ? "ok" : "err" }));
-    setSyncing(null);
-    setInput("");
-  };
-
-  const retry = async (note) => {
-    setSyncing(note.id);
-    setSyncSt(p => ({ ...p, [note.id]: "syncing" }));
-    const ok = await addNoteToNotionTask(note.taskName, note.text);
-    await save(notes.map(n => n.id === note.id ? { ...n, synced: ok } : n));
-    setSyncSt(p => ({ ...p, [note.id]: ok ? "ok" : "err" }));
-    setSyncing(null);
-  };
-
-  const del = async id => await save(notes.filter(n => n.id !== id));
-
-  return (
-    <div style={{ marginTop: 20, borderTop: `1px solid ${cobaltA(0.08)}`, paddingTop: 18 }}>
-      <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: B.cobalt, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 12 }}>Notes</div>
-      {notes.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
-          {notes.map(n => (
-            <div key={n.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.1)}` }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 700, color: B.cobalt, background: cobaltA(0.1), padding: "2px 7px", borderRadius: 10 }}>{n.taskLabel}</span>
-                  <span style={{ fontFamily: F.mono, fontSize: 8, color: cobaltA(0.4) }}>{n.date}</span>
-                  {n.synced && <span style={{ fontFamily: F.mono, fontSize: 8, color: ST.done.tx }}>✓ NOTION</span>}
-                  {syncSt[n.id] === "syncing" && <span style={{ fontFamily: F.mono, fontSize: 8, color: cobaltA(0.4) }}>syncing...</span>}
-                  {syncSt[n.id] === "err" && !n.synced && <button onClick={() => retry(n)} style={{ fontFamily: F.mono, fontSize: 8, color: ST.critical.tx, background: "transparent", border: "none", cursor: "pointer" }}>↺ retry</button>}
-                </div>
-                <p style={{ fontSize: 12, color: B.carbon, lineHeight: 1.55, fontFamily: F.body, margin: 0 }}>{n.text}</p>
-              </div>
-              <button onClick={() => del(n.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.3), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px", flexShrink: 0 }}>✕</button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
-        <select value={selected} onChange={e => setSelected(e.target.value)}
-          style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: B.cobalt, background: "#FAFBFF", border: `1px solid ${cobaltA(0.2)}`, borderRadius: 8, padding: "9px 10px", cursor: "pointer", outline: "none", flexShrink: 0, maxWidth: 260 }}>
-          {selectItems.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </select>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), add())}
-          placeholder={`Add a note for the selected ${itemLabel.toLowerCase()}...`}
-          style={{ flex: 1, background: "#FAFBFF", border: `1px solid ${cobaltA(0.15)}`, borderRadius: 8, padding: "9px 14px", color: B.carbon, fontSize: 12, fontFamily: F.body, outline: "none" }} />
-        <button onClick={add} disabled={syncing !== null || !input.trim()}
-          style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "9px 18px", background: syncing ? cobaltA(0.4) : B.cobalt, color: B.banana, border: "none", cursor: syncing ? "default" : "pointer", borderRadius: 8, flexShrink: 0, whiteSpace: "nowrap" }}>
-          {syncing ? "SAVING..." : "ADD NOTE"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
+// ── UI Components ─────────────────────────────────────────────────────────────
 function CaechetMark({ size = 32, color = B.banana }) {
   return (
     <svg width={size} height={size} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
@@ -249,7 +174,7 @@ function Sec({ n, title, open: def = false, children }) {
   const [open, setOpen] = useState(def);
   return (
     <div style={{ marginBottom: 12, borderRadius: 12, overflow: "hidden", boxShadow: open ? "0 2px 12px rgba(32,72,200,0.08), 0 1px 3px rgba(0,0,0,0.06)" : "0 1px 3px rgba(0,0,0,0.05)" }}>
-      <button onClick={() => setOpen(p => !p)} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: "#fff", borderLeft: `4px solid ${open ? B.cobalt : cobaltA(0.2)}`, border: `1px solid ${open ? cobaltA(0.15) : cobaltA(0.08)}`, borderRadius: open ? "12px 12px 0 0" : 12, padding: "16px 22px", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s ease" }}>
+      <button onClick={() => setOpen(p => !p)} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: "#fff", borderLeft: `4px solid ${open ? B.cobalt : cobaltA(0.2)}`, border: `1px solid ${open ? cobaltA(0.15) : cobaltA(0.08)}`, borderRadius: open ? "12px 12px 0 0" : 12, padding: "16px 22px", cursor: "pointer", fontFamily: "inherit" }}>
         <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 800, color: "#fff", letterSpacing: "0.1em", background: open ? B.cobalt : cobaltA(0.25), padding: "3px 8px", borderRadius: 20, minWidth: 28, textAlign: "center", lineHeight: 1.4 }}>{String(n).padStart(2, "0")}</span>
         <span style={{ fontFamily: F.display, fontSize: 14, fontWeight: 800, letterSpacing: "0.03em", color: B.cobalt, textTransform: "uppercase" }}>{title}</span>
         <div style={{ flex: 1 }} />
@@ -282,7 +207,7 @@ function EditableList({ storageKey, title, placeholder }) {
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: B.cobalt, flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: B.carbon, fontFamily: F.body, flex: 1 }}>{item.text}</span>
             <span style={{ fontFamily: F.mono, fontSize: 9, color: cobaltA(0.4) }}>{item.date}</span>
-            <button onClick={() => del(item.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.4), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 4 }}>✕</button>
+            <button onClick={() => del(item.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.4), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px" }}>✕</button>
           </div>
         ))}
       </div>}
@@ -298,21 +223,23 @@ function EditableList({ storageKey, title, placeholder }) {
 function NextSteps() {
   const [items, setItems] = useState([]);
   const [input, setInput] = useState("");
-  useEffect(() => { safeGet("standup:next-steps").then(v => { if (v) setItems(v); }); }, []);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { safeGet("standup:next-steps").then(v => { if (v) setItems(v); setLoaded(true); }); }, []);
   const save = useCallback(async nv => { setItems(nv); await safeSet("standup:next-steps", nv); }, []);
   const add = async () => { if (!input.trim()) return; await save([...items, { id: uid(), text: input.trim(), created: todayStr() }]); setInput(""); };
   const del = async id => await save(items.filter(i => i.id !== id));
   return (
     <div style={{ background: "#fff", borderRadius: 12, border: `1px solid ${cobaltA(0.12)}`, borderLeft: `4px solid ${B.cobaltBright}`, boxShadow: "0 1px 4px rgba(32,72,200,0.06)", padding: "18px 22px", marginTop: 12 }}>
       <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: B.cobalt, textTransform: "uppercase", marginBottom: 4 }}>Next Steps</div>
-      <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: cobaltA(0.4), marginBottom: 14, letterSpacing: "0.1em" }}>APPEARS AS "NEXT STEPS FROM YESTERDAY" TOMORROW</div>
+      <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: cobaltA(0.4), marginBottom: 14, letterSpacing: "0.1em" }}>SHARED ACROSS TEAM · VISIBLE TOMORROW</div>
+      {loaded && items.length === 0 && <div style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.3), marginBottom: 12, fontStyle: "italic" }}>No next steps yet</div>}
       {items.length > 0 && <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
         {items.map(item => (
           <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.08)}` }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: B.cobaltBright, flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: B.carbon, fontFamily: F.body, flex: 1 }}>{item.text}</span>
             <span style={{ fontFamily: F.mono, fontSize: 9, color: cobaltA(0.4) }}>{item.created}</span>
-            <button onClick={() => del(item.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.4), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 4 }}>✕</button>
+            <button onClick={() => del(item.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.4), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px" }}>✕</button>
           </div>
         ))}
       </div>}
@@ -320,6 +247,73 @@ function NextSteps() {
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), add())} placeholder="Add a next step..."
           style={{ flex: 1, background: "#FAFBFF", border: `1px solid ${cobaltA(0.15)}`, borderRadius: 8, padding: "9px 14px", color: B.carbon, fontSize: 12, fontFamily: F.body, outline: "none" }} />
         <button onClick={add} style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "9px 18px", background: B.cobalt, color: B.banana, border: "none", cursor: "pointer", borderRadius: 8 }}>ADD</button>
+      </div>
+    </div>
+  );
+}
+
+function SectionNotes({ storageKey, selectItems, itemLabel = "Task" }) {
+  const [notes, setNotes] = useState([]);
+  const [input, setInput] = useState("");
+  const [selected, setSelected] = useState("");
+  const [syncing, setSyncing] = useState(null);
+  const [syncSt, setSyncSt] = useState({});
+  useEffect(() => {
+    safeGet(storageKey).then(v => { if (v) setNotes(v); });
+    if (selectItems.length) setSelected(selectItems[0].value);
+  }, [storageKey]);
+  const save = useCallback(async nv => { setNotes(nv); await safeSet(storageKey, nv); }, [storageKey]);
+  const add = async () => {
+    if (!input.trim() || !selected) return;
+    const item = selectItems.find(i => i.value === selected);
+    const id = uid();
+    setSyncing(id); setSyncSt(p => ({ ...p, [id]: "syncing" }));
+    const ok = await addNoteToNotionTask(selected, input.trim());
+    const newNote = { id, taskName: selected, taskLabel: item?.label || selected, text: input.trim(), date: todayStr(), synced: ok };
+    await save([...notes, newNote]);
+    setSyncSt(p => ({ ...p, [id]: ok ? "ok" : "err" }));
+    setSyncing(null); setInput("");
+  };
+  const retry = async (note) => {
+    setSyncing(note.id); setSyncSt(p => ({ ...p, [note.id]: "syncing" }));
+    const ok = await addNoteToNotionTask(note.taskName, note.text);
+    await save(notes.map(n => n.id === note.id ? { ...n, synced: ok } : n));
+    setSyncSt(p => ({ ...p, [note.id]: ok ? "ok" : "err" }));
+    setSyncing(null);
+  };
+  const del = async id => await save(notes.filter(n => n.id !== id));
+  return (
+    <div style={{ marginTop: 20, borderTop: `1px solid ${cobaltA(0.08)}`, paddingTop: 18 }}>
+      <Label>Notes</Label>
+      {notes.length > 0 && <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+        {notes.map(n => (
+          <div key={n.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.1)}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 700, color: B.cobalt, background: cobaltA(0.1), padding: "2px 7px", borderRadius: 10 }}>{n.taskLabel}</span>
+                <span style={{ fontFamily: F.mono, fontSize: 8, color: cobaltA(0.4) }}>{n.date}</span>
+                {n.synced && <span style={{ fontFamily: F.mono, fontSize: 8, color: ST.done.tx }}>✓ NOTION</span>}
+                {syncSt[n.id] === "syncing" && <span style={{ fontFamily: F.mono, fontSize: 8, color: cobaltA(0.4) }}>syncing...</span>}
+                {syncSt[n.id] === "err" && !n.synced && <button onClick={() => retry(n)} style={{ fontFamily: F.mono, fontSize: 8, color: ST.critical.tx, background: "transparent", border: "none", cursor: "pointer" }}>↺ retry</button>}
+              </div>
+              <p style={{ fontSize: 12, color: B.carbon, lineHeight: 1.55, fontFamily: F.body, margin: 0 }}>{n.text}</p>
+            </div>
+            <button onClick={() => del(n.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.3), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px", flexShrink: 0 }}>✕</button>
+          </div>
+        ))}
+      </div>}
+      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+        <select value={selected} onChange={e => setSelected(e.target.value)}
+          style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: B.cobalt, background: "#FAFBFF", border: `1px solid ${cobaltA(0.2)}`, borderRadius: 8, padding: "9px 10px", cursor: "pointer", outline: "none", flexShrink: 0, maxWidth: 260 }}>
+          {selectItems.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </select>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), add())}
+          placeholder={`Add a note for the selected ${itemLabel.toLowerCase()}...`}
+          style={{ flex: 1, background: "#FAFBFF", border: `1px solid ${cobaltA(0.15)}`, borderRadius: 8, padding: "9px 14px", color: B.carbon, fontSize: 12, fontFamily: F.body, outline: "none" }} />
+        <button onClick={add} disabled={syncing !== null || !input.trim()}
+          style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "9px 18px", background: syncing ? cobaltA(0.4) : B.cobalt, color: B.banana, border: "none", cursor: syncing ? "default" : "pointer", borderRadius: 8, flexShrink: 0, whiteSpace: "nowrap" }}>
+          {syncing ? "SAVING..." : "ADD NOTE"}
+        </button>
       </div>
     </div>
   );
@@ -399,7 +393,29 @@ function BrandCard({ brand }) {
   );
 }
 
+// ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
+  const [liveData, setLiveData] = useState(null);
+  const [dataUpdated, setDataUpdated] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    fetch("/api/standup")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.data) { setLiveData(d.data); setDataUpdated(d.date); }
+      })
+      .catch(() => {});
+  }, []);
+
+  const BRANDS  = liveData?.brands   || DEFAULT_BRANDS;
+  const WEEKLY  = liveData?.weekly   || DEFAULT_WEEKLY;
+  const APPROVALS = liveData?.approvals || DEFAULT_APPROVALS;
+  const BLOCKERS  = liveData?.blockers  || DEFAULT_BLOCKERS;
+  const MUST_WINS = liveData?.mustWins  || DEFAULT_MUST_WINS;
+
+  const DATE_LABEL = new Date().toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" }).toUpperCase();
+
   return (
     <div style={{ fontFamily: F.body, background: "#FFFFFF", minHeight: "100vh", color: B.carbon }}>
       <Head>
@@ -419,123 +435,140 @@ export default function App() {
       </Head>
 
       {/* HEADER */}
-      <div style={{ background: B.cobalt, padding: "0" }}>
+      <div style={{ background: B.cobalt }}>
         <div style={{ maxWidth: 1060, margin: "0 auto", padding: "24px 48px 20px" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "rgba(0,0,0,0.15)", padding: "9px 16px", marginBottom: 22, borderRadius: 8, borderLeft: `3px solid ${B.banana}` }}>
-            <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: B.banana, letterSpacing: "0.12em", whiteSpace: "nowrap", paddingTop: 1 }}>DEPLOY TODAY</span>
-            <span style={{ fontSize: 12, color: bananaA(0.85), lineHeight: 1.5, fontFamily: F.body }}>UB_RealOnes + LB_DressesThatDoEverything · HV TheCookoutEdit deployed May 5 · LB Mother's Day Promo #1 (May 8) BLOCKED — 13 days unfilled</span>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12, background:"rgba(0,0,0,0.15)", padding:"9px 16px", marginBottom:22, borderRadius:8, borderLeft:`3px solid ${B.banana}` }}>
+            <span style={{ fontFamily:F.mono, fontSize:9, fontWeight:700, color:B.banana, letterSpacing:"0.12em", whiteSpace:"nowrap", paddingTop:1 }}>
+              {liveData ? "LIVE DATA" : "DEPLOY TODAY"}
+            </span>
+            <span style={{ fontSize:12, color:bananaA(0.85), lineHeight:1.5, fontFamily:F.body }}>
+              {liveData
+                ? `Updated from Notion · ${dataUpdated ? new Date(dataUpdated).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}) : ""}`
+                : "UB_RealOnes + LB_DressesThatDoEverything · HV TheCookoutEdit deployed May 5 · LB Mother's Day Promo #1 (May 8) BLOCKED — 13 days unfilled"
+              }
+            </span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-              <CaechetMark size={44} color={B.banana} />
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:20 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:18 }}>
+              <CaechetMark size={44} color={B.banana}/>
               <div>
-                <CaechetWordmark size={30} color={B.banana} />
-                <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: bananaA(0.7), letterSpacing: "0.16em", marginTop: 5 }}>DAILY STANDUP · {DATE_LABEL}</div>
+                <CaechetWordmark size={30} color={B.banana}/>
+                <div style={{ fontFamily:F.mono, fontSize:9, fontWeight:600, color:bananaA(0.7), letterSpacing:"0.16em", marginTop:5 }}>DAILY STANDUP · {DATE_LABEL}</div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 28 }}>
-              {[["07", "BRANDS"], ["02", "TODAY"], ["11", "THIS WEEK"]].map(([n, l]) => (
-                <div key={l} style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: F.display, fontSize: 26, fontWeight: 800, color: B.banana, lineHeight: 1 }}>{n}</div>
-                  <div style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 600, color: bananaA(0.55), letterSpacing: "0.14em", marginTop: 2 }}>{l}</div>
+            <div style={{ display:"flex", gap:28 }}>
+              {[[String(BRANDS.length).padStart(2,"0"),"BRANDS"],[String(WEEKLY.filter(w=>w.s==="deploy").length).padStart(2,"0"),"TODAY"],[String(WEEKLY.length).padStart(2,"0"),"THIS WEEK"]].map(([n,l])=>(
+                <div key={l} style={{ textAlign:"center" }}>
+                  <div style={{ fontFamily:F.display, fontSize:26, fontWeight:800, color:B.banana, lineHeight:1 }}>{n}</div>
+                  <div style={{ fontFamily:F.mono, fontSize:8, fontWeight:600, color:bananaA(0.55), letterSpacing:"0.14em", marginTop:2 }}>{l}</div>
                 </div>
               ))}
             </div>
           </div>
-          <div style={{ marginTop: 16, fontFamily: F.mono, fontSize: 9, fontWeight: 600, letterSpacing: "0.26em", color: bananaA(0.5) }}>STAY DANGEROUS · BE HUMAN</div>
+          <div style={{ marginTop:16, fontFamily:F.mono, fontSize:9, fontWeight:600, letterSpacing:"0.26em", color:bananaA(0.5) }}>STAY DANGEROUS · BE HUMAN</div>
         </div>
       </div>
 
       {/* BODY */}
-      <div style={{ maxWidth: 1060, margin: "0 auto", padding: "32px 48px 80px" }}>
+      <div style={{ maxWidth:1060, margin:"0 auto", padding:"32px 48px 80px" }}>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
-          <EditableList storageKey="standup:next-steps" title="Next Steps From Yesterday" placeholder="Items saved in Next Steps yesterday appear here..." />
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:4 }}>
+          <EditableList storageKey="standup:next-steps" title="Next Steps From Yesterday" placeholder="Items added yesterday appear here for the whole team..." />
           <EditableList storageKey="standup:meeting-announcements" title="Announcements" placeholder="Add an announcement for today's standup..." />
         </div>
+        <div style={{ height:8 }}/>
 
-        <div style={{ height: 8 }} />
-
+        {/* §01 Brand Updates */}
         <Sec n={1} title="Brand Updates" open={true}>
-          <Label style={{ marginBottom: 16 }}>7 ACTIVE ACCOUNTS · COMMENTS SYNC TO NOTION</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-            {BRANDS.map(b => <BrandCard key={b.id} brand={b} />)}
+          <Label style={{ marginBottom:16 }}>
+            {BRANDS.length} ACTIVE ACCOUNTS · COMMENTS SYNC TO NOTION
+          </Label>
+          <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+            {BRANDS.map(b => <BrandCard key={b.id} brand={b}/>)}
           </div>
         </Sec>
 
+        {/* §02 Campaigns Deploying This Week */}
         <Sec n={2} title="Campaigns Deploying This Week" open={true}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
-            <Label style={{ marginBottom: 0 }}>WEEK OF MAY 4–10, 2026 · ALL BRANDS</Label>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-              {[["DEPLOYED", ST.done.tx, "done"], ["DEPLOY TODAY", ST.deploy.tx, "deploy"], ["BLOCKED", ST.critical.tx, "blocked"], ["PREP", ST.prep.tx, "prep"]].map(([l, col, key]) => (
-                <span key={l} style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: col, letterSpacing: "0.08em" }}>{l} <strong>{WEEKLY.filter(w => w.s === key).length}</strong></span>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+            <Label style={{ marginBottom:0 }}>THIS WEEK · ALL BRANDS</Label>
+            <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+              {[["DEPLOYED",ST.done.tx,"done"],["DEPLOY TODAY",ST.deploy.tx,"deploy"],["BLOCKED",ST.critical.tx,"blocked"],["PREP",ST.prep.tx,"prep"]].map(([l,col,key])=>(
+                <span key={l} style={{ fontFamily:F.mono, fontSize:9, fontWeight:700, color:col, letterSpacing:"0.08em" }}>{l} <strong>{WEEKLY.filter(w=>w.s===key).length}</strong></span>
               ))}
             </div>
           </div>
-          <Tbl heads={["Day", "Brand", "Campaign", "Type", "Status", "Note"]}
-            rows={WEEKLY.map(c => [
-              <span style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: B.cobalt }}>{c.day}</span>,
-              <div><span style={{ fontFamily: F.ui, fontWeight: 700, fontSize: 12, color: B.carbon }}>{c.brand}</span>{c.sub && <span style={{ fontFamily: F.mono, fontSize: 8, color: cobaltA(0.5), marginLeft: 6 }}>{c.sub}</span>}</div>,
-              <span style={{ fontFamily: F.mono, fontSize: 10, color: B.carbon }}>{c.name}</span>,
-              <span style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 600, padding: "3px 8px", background: c.type.includes("EMAIL") ? cobaltA(0.1) : "rgba(22,163,74,0.1)", color: c.type.includes("EMAIL") ? B.cobalt : "#16A34A", border: `1px solid ${c.type.includes("EMAIL") ? cobaltA(0.2) : "rgba(22,163,74,0.2)"}`, borderRadius: 20 }}>{c.type}</span>,
-              <Tag label={c.s === "deploy" ? "DEPLOY TODAY" : c.s === "done" ? "DEPLOYED" : c.s === "blocked" ? "BLOCKED" : "PREP"} s={c.s} />,
-              <span style={{ color: c.s === "blocked" ? ST.critical.tx : c.s === "done" ? ST.done.tx : B.carbon, fontSize: 11, fontFamily: F.body }}>{c.note}</span>
-            ])} flagFn={ri => WEEKLY[ri]?.s === "blocked"} />
+          <Tbl heads={["Day","Brand","Campaign","Type","Status","Note"]}
+            rows={WEEKLY.map(c=>[
+              <span style={{ fontFamily:F.mono, fontSize:10, fontWeight:700, color:B.cobalt }}>{c.day}</span>,
+              <div><span style={{ fontFamily:F.ui, fontWeight:700, fontSize:12, color:B.carbon }}>{c.brand}</span>{c.sub&&<span style={{ fontFamily:F.mono, fontSize:8, color:cobaltA(0.5), marginLeft:6 }}>{c.sub}</span>}</div>,
+              <span style={{ fontFamily:F.mono, fontSize:10, color:B.carbon }}>{c.name}</span>,
+              <span style={{ fontFamily:F.mono, fontSize:8, fontWeight:600, padding:"3px 8px", background:c.type&&c.type.includes("EMAIL")?cobaltA(0.1):"rgba(22,163,74,0.1)", color:c.type&&c.type.includes("EMAIL")?B.cobalt:"#16A34A", border:`1px solid ${c.type&&c.type.includes("EMAIL")?cobaltA(0.2):"rgba(22,163,74,0.2)"}`, borderRadius:20 }}>{c.type}</span>,
+              <Tag label={c.s==="deploy"?"DEPLOY TODAY":c.s==="done"?"DEPLOYED":c.s==="blocked"?"BLOCKED":"PREP"} s={c.s}/>,
+              <span style={{ color:c.s==="blocked"?ST.critical.tx:c.s==="done"?ST.done.tx:B.carbon, fontSize:11, fontFamily:F.body }}>{c.note}</span>
+            ])} flagFn={ri=>WEEKLY[ri]?.s==="blocked"}/>
           <SectionNotes storageKey="standup:campaign-notes" itemLabel="Campaign"
-            selectItems={WEEKLY.map(c => ({ value: c.name, label: `${c.day} · ${c.brand}${c.sub ? " (" + c.sub + ")" : ""} — ${c.name}` }))} />
+            selectItems={WEEKLY.map(c=>({ value:c.name, label:`${c.day} · ${c.brand}${c.sub?" ("+c.sub+")":""} — ${c.name}` }))}/>
         </Sec>
 
+        {/* §03 Awaiting Client Approval */}
         <Sec n={3} title="Awaiting Client Approval" open={true}>
-          <Tbl heads={["Brand", "Asset", "Date Sent", "Waiting Since", "Follow-Up"]} rows={APPROVALS.map(r => [r.brand, r.asset, r.sent, r.since, r.fu])} flagFn={ri => ri === 0} />
-          <div style={{ marginTop: 14, padding: "12px 16px", background: "rgba(224,51,51,0.04)", borderRadius: 8, border: "1px solid rgba(224,51,51,0.15)", display: "flex", gap: 10, alignItems: "flex-start" }}>
-            <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: ST.critical.tx, letterSpacing: "0.1em", whiteSpace: "nowrap" }}>FLAG</span>
-            <span style={{ fontSize: 12, color: B.carbon, fontFamily: F.body, lineHeight: 1.55 }}>LB Mother's Day placeholder since April 23 — 13 days. Promo #1 is May 8. Two sends at risk if not resolved today.</span>
+          <Tbl heads={["Brand","Asset","Date Sent","Waiting Since","Follow-Up"]} rows={APPROVALS.map(r=>[r.brand,r.asset,r.sent,r.since,r.fu])} flagFn={ri=>ri===0}/>
+          <div style={{ marginTop:14, padding:"12px 16px", background:"rgba(224,51,51,0.04)", borderRadius:8, border:"1px solid rgba(224,51,51,0.15)", display:"flex", gap:10, alignItems:"flex-start" }}>
+            <span style={{ fontFamily:F.mono, fontSize:9, fontWeight:700, color:ST.critical.tx, letterSpacing:"0.1em", whiteSpace:"nowrap" }}>FLAG</span>
+            <span style={{ fontSize:12, color:B.carbon, fontFamily:F.body, lineHeight:1.55 }}>LB Mother's Day placeholder since April 23 — 13 days. Promo #1 is May 8. Two sends at risk if not resolved today.</span>
           </div>
           <SectionNotes storageKey="standup:approval-notes" itemLabel="Approval"
-            selectItems={APPROVALS.map(r => ({ value: r.asset, label: `${r.brand} — ${r.asset}` }))} />
+            selectItems={APPROVALS.map(r=>({ value:r.asset, label:`${r.brand} — ${r.asset}` }))}/>
         </Sec>
 
+        {/* §04 Blockers */}
         <Sec n={4} title="Blockers / Risks" open={true}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
-            {BLOCKERS.map((b, i) => { const c = sc(b.u); return (
-              <div key={i} style={{ display: "flex", gap: 14, padding: "12px 18px", background: c.bg, borderRadius: 8, border: `1px solid ${c.br}`, alignItems: "flex-start" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.tx, flexShrink: 0, marginTop: 4 }} />
-                <span style={{ fontSize: 13, color: B.carbon, lineHeight: 1.55, fontFamily: F.body, flex: 1 }}>{b.t}</span>
+          <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:6 }}>
+            {BLOCKERS.map((b,i)=>{ const c=sc(b.u); return(
+              <div key={i} style={{ display:"flex", gap:14, padding:"12px 18px", background:c.bg, borderRadius:8, border:`1px solid ${c.br}`, alignItems:"flex-start" }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:c.tx, flexShrink:0, marginTop:4 }}/>
+                <span style={{ fontSize:13, color:B.carbon, lineHeight:1.55, fontFamily:F.body, flex:1 }}>{b.t}</span>
               </div>
-            ); })}
+            );})}
           </div>
         </Sec>
 
+        {/* §05 Must-Wins */}
         <Sec n={5} title="Today's Must-Wins" open={true}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
-            {MUST_WINS.map((w, i) => (
-              <div key={i} style={{ display: "flex", gap: 18, padding: "16px 20px", background: "#fff", borderRadius: 10, border: `1px solid ${cobaltA(0.12)}`, boxShadow: "0 1px 4px rgba(32,72,200,0.06)", alignItems: "flex-start" }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: B.cobalt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontFamily: F.display, fontSize: 16, fontWeight: 800, color: B.banana, lineHeight: 1 }}>{i + 1}</span>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:8 }}>
+            {MUST_WINS.map((w,i)=>(
+              <div key={i} style={{ display:"flex", gap:18, padding:"16px 20px", background:"#fff", borderRadius:10, border:`1px solid ${cobaltA(0.12)}`, boxShadow:"0 1px 4px rgba(32,72,200,0.06)", alignItems:"flex-start" }}>
+                <div style={{ width:36, height:36, borderRadius:"50%", background:B.cobalt, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <span style={{ fontFamily:F.display, fontSize:16, fontWeight:800, color:B.banana, lineHeight:1 }}>{i+1}</span>
                 </div>
-                <p style={{ fontSize: 13, color: B.carbon, lineHeight: 1.65, fontFamily: F.body, paddingTop: 6, margin: 0 }}>{w}</p>
+                <p style={{ fontSize:13, color:B.carbon, lineHeight:1.65, fontFamily:F.body, paddingTop:6, margin:0 }}>{w}</p>
               </div>
             ))}
           </div>
         </Sec>
 
-        <NextSteps />
+        <NextSteps/>
 
-        <div style={{ height: 1, background: cobaltA(0.08), margin: "32px 0" }} />
+        <div style={{ height:1, background:cobaltA(0.08), margin:"32px 0" }}/>
 
+        {/* §06 Performance */}
         <Sec n={6} title="Performance Watch">
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "56px 20px", gap: 14 }}>
-            <CaechetMark size={44} color={cobaltA(0.12)} />
-            <div style={{ fontFamily: F.display, fontSize: 22, fontWeight: 800, letterSpacing: "0.06em", color: B.carbon, opacity: 0.18, textTransform: "uppercase" }}>Coming Soon</div>
-            <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: B.carbon, opacity: 0.18, letterSpacing: "0.16em" }}>CAMPAIGN PERFORMANCE DATA WILL APPEAR HERE</div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"56px 20px", gap:14 }}>
+            <CaechetMark size={44} color={cobaltA(0.12)}/>
+            <div style={{ fontFamily:F.display, fontSize:22, fontWeight:800, letterSpacing:"0.06em", color:B.carbon, opacity:0.18, textTransform:"uppercase" }}>Coming Soon</div>
+            <div style={{ fontFamily:F.mono, fontSize:9, fontWeight:600, color:B.carbon, opacity:0.18, letterSpacing:"0.16em" }}>CAMPAIGN PERFORMANCE DATA WILL APPEAR HERE</div>
           </div>
         </Sec>
 
-        <div style={{ marginTop: 40, padding: "16px 0", borderTop: `1px solid ${cobaltA(0.1)}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: cobaltA(0.35), letterSpacing: "0.1em" }}>POPULATED FROM NOTION WORKSPACE · {DATE_LABEL}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <CaechetMark size={14} color={cobaltA(0.25)} />
-            <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, letterSpacing: "0.18em", color: cobaltA(0.35) }}>STAY DANGEROUS · BE HUMAN</span>
+        {/* Footer */}
+        <div style={{ marginTop:40, padding:"16px 0", borderTop:`1px solid ${cobaltA(0.1)}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+          <span style={{ fontFamily:F.mono, fontSize:9, fontWeight:600, color:cobaltA(0.35), letterSpacing:"0.1em" }}>
+            {liveData ? "LIVE FROM NOTION · " : "LAST UPDATED · "}{DATE_LABEL}
+          </span>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <CaechetMark size={14} color={cobaltA(0.25)}/>
+            <span style={{ fontFamily:F.mono, fontSize:9, fontWeight:600, letterSpacing:"0.18em", color:cobaltA(0.35) }}>STAY DANGEROUS · BE HUMAN</span>
           </div>
         </div>
       </div>
