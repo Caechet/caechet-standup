@@ -404,9 +404,26 @@ function BrandCard({ brand }) {
           </div>
         </div>
       </div>
+
+      {/* Logout */}
+      <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 100 }}>
+        <a href="/api/logout" style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "8px 14px", background: cobaltA(0.08), color: cobaltA(0.5), border: `1px solid ${cobaltA(0.12)}`, borderRadius: 20, textDecoration: "none", display: "inline-block" }}>
+          SIGN OUT
+        </a>
+      </div>
     </div>
   );
 }
+
+export async function getServerSideProps({ req }) {
+  const cookie = req.headers.cookie || "";
+  const isAuthed = cookie.includes("caechet_auth=1");
+  if (!isAuthed) {
+    return { redirect: { destination: "/login", permanent: false } };
+  }
+  return { props: {} };
+}
+
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
@@ -588,6 +605,22 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Logout */}
+      <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 100 }}>
+        <a href="/api/logout" style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "8px 14px", background: cobaltA(0.08), color: cobaltA(0.5), border: `1px solid ${cobaltA(0.12)}`, borderRadius: 20, textDecoration: "none", display: "inline-block" }}>
+          SIGN OUT
+        </a>
+      </div>
     </div>
   );
+}
+
+export async function getServerSideProps({ req }) {
+  const cookie = req.headers.cookie || "";
+  const isAuthed = cookie.includes("caechet_auth=1");
+  if (!isAuthed) {
+    return { redirect: { destination: "/login", permanent: false } };
+  }
+  return { props: {} };
 }
