@@ -476,7 +476,7 @@ export default function App() {
               <CaechetMark size={44} color={B.banana}/>
               <div>
                 <CaechetWordmark size={30} color={B.banana}/>
-                <div style={{ fontFamily:F.mono, fontSize:9, fontWeight:600, color:bananaA(0.7), letterSpacing:"0.16em", marginTop:5 }}>DAILY STANDUP · {DATE_LABEL}</div>
+                <div style={{ fontFamily:F.mono, fontSize:9, fontWeight:600, color:bananaA(0.7), letterSpacing:"0.16em", marginTop:5 }}>ADMIN PORTAL · {DATE_LABEL}</div>
               </div>
             </div>
             <div style={{ display:"flex", gap:28 }}>
