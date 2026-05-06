@@ -42,7 +42,7 @@ export default function Login() {
         body: JSON.stringify({ password }),
       });
       if (res.ok) {
-        router.push("/");
+        router.push("/standup");
       } else {
         setError("Incorrect password. Try again.");
         setPassword("");
