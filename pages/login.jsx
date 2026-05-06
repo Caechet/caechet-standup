@@ -74,7 +74,7 @@ export default function Login() {
               <div style={{ fontFamily: F.ui, fontWeight: 700, fontSize: 24, letterSpacing: "-0.03em", color: B.banana, lineHeight: 1 }}>
                 cæchet<span style={{ fontSize: 5, verticalAlign: "super", marginLeft: 2 }}>®</span>
               </div>
-              <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: bananaA(0.6), letterSpacing: "0.18em", marginTop: 5 }}>DAILY STANDUP</div>
+              <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: bananaA(0.6), letterSpacing: "0.18em", marginTop: 5 }}>ADMIN PORTAL</div>
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export default function Login() {
         </div>
 
         <div style={{ marginTop: 24, fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: bananaA(0.35), letterSpacing: "0.16em" }}>
-          CÆCHET® RETENTION MARKETING
+          CÆCHET® LIFECYCLE MARKETING
         </div>
       </div>
     </>
