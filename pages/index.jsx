@@ -84,7 +84,9 @@ async function safeGet(k) {
     const res = await fetch(`/api/shared-storage?key=${encodeURIComponent(k)}`);
     if (!res.ok) return null;
     const d = await res.json();
-    return d.value ? JSON.parse(d.value) : null;
+    if (d.value === null || d.value === undefined) return null;
+    if (typeof d.value === "string") return JSON.parse(d.value);
+    return d.value;
   } catch { return null; }
 }
 
