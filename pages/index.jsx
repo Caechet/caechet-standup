@@ -415,16 +415,6 @@ function BrandCard({ brand }) {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  const cookie = req.headers.cookie || "";
-  const isAuthed = cookie.includes("caechet_auth=1");
-  if (!isAuthed) {
-    return { redirect: { destination: "/login", permanent: false } };
-  }
-  return { props: {} };
-}
-
-
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const isMobile = useMobile();
