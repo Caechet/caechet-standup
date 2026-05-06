@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 
+function useMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 const B = {
   cobalt: "#2048C8", cobaltDark: "#0F2F8C", cobaltBright: "#4A74F5",
   banana: "#FCF1B8", carbon: "#0B0B0D", snow: "#FAF9F6", cream: "#F2EAD8",
@@ -255,6 +266,7 @@ function NextSteps() {
 }
 
 function SectionNotes({ storageKey, selectItems, itemLabel = "Task" }) {
+  const isMobile = useMobile();
   const [notes, setNotes] = useState([]);
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState("");
@@ -304,9 +316,9 @@ function SectionNotes({ storageKey, selectItems, itemLabel = "Task" }) {
           </div>
         ))}
       </div>}
-      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "stretch", flexWrap: isMobile ? "wrap" : "nowrap" }}>
         <select value={selected} onChange={e => setSelected(e.target.value)}
-          style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: B.cobalt, background: "#FAFBFF", border: `1px solid ${cobaltA(0.2)}`, borderRadius: 8, padding: "9px 10px", cursor: "pointer", outline: "none", flexShrink: 0, maxWidth: 260 }}>
+          style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: B.cobalt, background: "#FAFBFF", border: `1px solid ${cobaltA(0.2)}`, borderRadius: 8, padding: "9px 10px", cursor: "pointer", outline: "none", flexShrink: 0, maxWidth: isMobile ? "100%" : 260, width: isMobile ? "100%" : "auto" }}>
           {selectItems.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), add())}
@@ -322,6 +334,7 @@ function SectionNotes({ storageKey, selectItems, itemLabel = "Task" }) {
 }
 
 function BrandCard({ brand }) {
+  const isMobile = useMobile();
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
   const [syncing, setSyncing] = useState(null);
@@ -353,7 +366,7 @@ function BrandCard({ brand }) {
           ))}
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 0 }}>
         <div style={{ padding: "14px 18px", borderRight: `1px solid ${cobaltA(0.08)}` }}>
           <Label>Today's Status</Label>
           <p style={{ fontSize: 12, color: B.carbon, lineHeight: 1.65, fontFamily: F.body, margin: 0 }}>{brand.focus}</p>
@@ -397,6 +410,7 @@ function BrandCard({ brand }) {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
+  const isMobile = useMobile();
   const [liveData, setLiveData] = useState(null);
   const [dataUpdated, setDataUpdated] = useState(null);
 
@@ -438,8 +452,8 @@ export default function App() {
 
       {/* HEADER */}
       <div style={{ background: B.cobalt }}>
-        <div style={{ maxWidth: 1060, margin: "0 auto", padding: "24px 48px 20px" }}>
-          <div style={{ display:"flex", alignItems:"flex-start", gap:12, background:"rgba(0,0,0,0.15)", padding:"9px 16px", marginBottom:22, borderRadius:8, borderLeft:`3px solid ${B.banana}` }}>
+        <div style={{ maxWidth: 1060, margin: "0 auto", padding: isMobile ? "16px 16px 16px" : "24px 48px 20px" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:8, background:"rgba(0,0,0,0.15)", padding: isMobile ? "8px 12px" : "9px 16px", marginBottom: isMobile ? 16 : 22, borderRadius:8, borderLeft:`3px solid ${B.banana}` }}>
             <span style={{ fontFamily:F.mono, fontSize:9, fontWeight:700, color:B.banana, letterSpacing:"0.12em", whiteSpace:"nowrap", paddingTop:1 }}>
               {liveData ? "LIVE DATA" : "DEPLOY TODAY"}
             </span>
@@ -450,7 +464,7 @@ export default function App() {
               }
             </span>
           </div>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:20 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile ? "flex-start" : "center", flexWrap:"wrap", gap: isMobile ? 12 : 20 }}>
             <div style={{ display:"flex", alignItems:"center", gap:18 }}>
               <CaechetMark size={44} color={B.banana}/>
               <div>
@@ -461,7 +475,7 @@ export default function App() {
             <div style={{ display:"flex", gap:28 }}>
               {[[String(BRANDS.length).padStart(2,"0"),"BRANDS"],[String(WEEKLY.filter(w=>w.s==="deploy").length).padStart(2,"0"),"TODAY"],[String(WEEKLY.length).padStart(2,"0"),"THIS WEEK"]].map(([n,l])=>(
                 <div key={l} style={{ textAlign:"center" }}>
-                  <div style={{ fontFamily:F.display, fontSize:26, fontWeight:800, color:B.banana, lineHeight:1 }}>{n}</div>
+                  <div style={{ fontFamily:F.display, fontSize: isMobile ? 20 : 26, fontWeight:800, color:B.banana, lineHeight:1 }}>{n}</div>
                   <div style={{ fontFamily:F.mono, fontSize:8, fontWeight:600, color:bananaA(0.55), letterSpacing:"0.14em", marginTop:2 }}>{l}</div>
                 </div>
               ))}
@@ -472,9 +486,9 @@ export default function App() {
       </div>
 
       {/* BODY */}
-      <div style={{ maxWidth:1060, margin:"0 auto", padding:"32px 48px 80px" }}>
+      <div style={{ maxWidth:1060, margin:"0 auto", padding: isMobile ? "16px 16px 60px" : "32px 48px 80px" }}>
 
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:4 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginBottom:4 }}>
           <EditableList storageKey="standup:next-steps" title="Next Steps From Yesterday" placeholder="Items added yesterday appear here for the whole team..." />
           <EditableList storageKey="standup:meeting-announcements" title="Announcements" placeholder="Add an announcement for today's standup..." />
         </div>
