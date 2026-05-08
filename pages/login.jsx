@@ -42,7 +42,7 @@ export default function Login() {
         body: JSON.stringify({ password }),
       });
       if (res.ok) {
-        router.push("/standup");
+        router.push("/");
       } else {
         setError("Incorrect password. Try again.");
         setPassword("");
@@ -57,17 +57,15 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>CÆCHET Standup — Login</title>
+        <title>CÆCHET — Login</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Lato:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <style>{`*{box-sizing:border-box;margin:0;padding:0} input:focus{outline:none;}`}</style>
       </Head>
       <div style={{ minHeight: "100vh", background: B.cobalt, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px" }}>
         
-        {/* Card */}
         <div style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.2)" }}>
           
-          {/* Header */}
           <div style={{ background: B.cobalt, padding: "32px 36px 28px", display: "flex", alignItems: "center", gap: 16 }}>
             <CaechetMark size={40} color={B.banana} />
             <div>
@@ -78,11 +76,10 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Form */}
           <div style={{ padding: "32px 36px 36px" }}>
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontFamily: F.ui, fontWeight: 700, fontSize: 18, color: B.carbon, marginBottom: 6 }}>Team Access</div>
-              <div style={{ fontFamily: F.body, fontSize: 13, color: cobaltA(0.5), lineHeight: 1.5 }}>Enter the team password to access today's standup.</div>
+              <div style={{ fontFamily: F.body, fontSize: 13, color: cobaltA(0.5), lineHeight: 1.5 }}>Enter the team password to continue.</div>
             </div>
 
             <form onSubmit={handleSubmit}>
