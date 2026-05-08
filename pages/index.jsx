@@ -51,10 +51,10 @@ export default function IndexPage() {
 
       </div>
 
-      <div style={{ padding: "52px 40px", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 640 }}>
+      <div style={{ padding: "28px 40px", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 860 }}>
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", color: "#fff", fontFamily: "'Archivo',sans-serif" }}>Where do you<br/>want to go?</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
           <Link href="/standup" className="card" style={{ background: "#FCF1B8", borderRadius: 14, padding: "24px 26px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 138, transition: "transform 0.2s" }}>
             <div>
