@@ -211,14 +211,14 @@ function EditableList({ storageKey, title, placeholder }) {
   const add = async () => { if (!input.trim()) return; await save([...items, { id: uid(), text: input.trim(), date: todayStr() }]); setInput(""); };
   const del = async id => await save(items.filter(i => i.id !== id));
   return (
-    <div style={{ background: "#fff", borderRadius: 12, border: `1px solid ${cobaltA(0.12)}`, borderLeft: `4px solid ${B.cobalt}`, boxShadow: "0 1px 4px rgba(32,72,200,0.06)", padding: "18px 22px", marginBottom: 0, display:"flex", flexDirection:"column", height:"100%" }}>
+    <div style={{ background: "#fff", borderRadius: 12, border: `1px solid ${cobaltA(0.12)}`, borderLeft: `4px solid ${B.cobalt}`, boxShadow: "0 1px 4px rgba(32,72,200,0.06)", padding: "18px 22px", marginBottom: 0, display:"flex", flexDirection:"column", height:"100%", minWidth:0, overflow:"hidden" }}>
       <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: B.cobalt, textTransform: "uppercase", marginBottom: 14 }}>{title}</div>
       {loaded && items.length === 0 && <div style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.3), marginBottom: 12, fontStyle: "italic" }}>No items yet</div>}
       {items.length > 0 && <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
         {items.map(item => (
-          <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.08)}` }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: B.cobalt, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: B.carbon, fontFamily: F.body, flex: 1 }}>{item.text}</span>
+          <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.08)}`, minWidth:0, overflow:"hidden" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: B.cobalt, flexShrink: 0, marginTop: 5 }} />
+            <span style={{ fontSize: 13, color: B.carbon, fontFamily: F.body, flex: 1, wordBreak:"break-word", minWidth:0 }}>{item.text}</span>
             <span style={{ fontFamily: F.mono, fontSize: 9, color: cobaltA(0.4) }}>{item.date}</span>
             <button onClick={() => del(item.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.4), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px" }}>✕</button>
           </div>
@@ -249,9 +249,9 @@ function NextSteps() {
       {loaded && items.length === 0 && <div style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.3), marginBottom: 12, fontStyle: "italic" }}>No next steps yet</div>}
       {items.length > 0 && <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
         {items.map(item => (
-          <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.08)}` }}>
+          <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.08)}`, minWidth:0, overflow:"hidden" }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: B.cobaltBright, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: B.carbon, fontFamily: F.body, flex: 1 }}>{item.text}</span>
+            <span style={{ fontSize: 13, color: B.carbon, fontFamily: F.body, flex: 1, wordBreak:"break-word", minWidth:0 }}>{item.text}</span>
             <span style={{ fontFamily: F.mono, fontSize: 9, color: cobaltA(0.4) }}>{item.created}</span>
             <button onClick={() => del(item.id)} style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.4), background: "transparent", border: "none", cursor: "pointer", padding: "2px 4px" }}>✕</button>
           </div>
@@ -507,7 +507,7 @@ export default function App() {
       {/* BODY */}
       <div style={{ maxWidth:1060, margin:"0 auto", padding: isMobile ? "16px 16px 60px" : "32px 48px 80px" }}>
 
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginBottom:4, alignItems:"stretch" }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginBottom:4, alignItems:"stretch", minWidth:0 }}>
           <EditableList storageKey="standup:next-steps" title="Next Steps From Yesterday" placeholder="Items added yesterday appear here for the whole team..." />
           <EditableList storageKey="standup:meeting-announcements" title="Announcements" placeholder="Add an announcement for today's standup..." />
         </div>
