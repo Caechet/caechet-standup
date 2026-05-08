@@ -55,7 +55,7 @@ export default function IndexPage() {
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", color: "#fff", fontFamily: "'Archivo',sans-serif", marginBottom: 20 }}>Where do you<br/>want to go?</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 900 }}>
 
-          <Link href="/standup" className="card" style={{ background: "#FCF1B8", borderRadius: 14, padding: "24px 26px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 138, transition: "transform 0.2s" }}>
+          <Link href="/standup" className="card" style={{ background: "#FCF1B8", borderRadius: 14, padding: "24px 26px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 220, transition: "transform 0.2s" }}>
             <div>
               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(32,72,200,0.45)", marginBottom: 6 }}>Daily</div>
               <div style={{ fontFamily: "'Archivo',sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em", color: "#2048C8" }}>Standup</div>
@@ -66,7 +66,7 @@ export default function IndexPage() {
             </div>
           </Link>
 
-          <Link href="/jobs" className="card" style={{ background: "#ffffff", borderRadius: 14, padding: "24px 26px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 138, transition: "transform 0.2s" }}>
+          <Link href="/jobs" className="card" style={{ background: "#ffffff", borderRadius: 14, padding: "24px 26px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 220, transition: "transform 0.2s" }}>
             <div>
               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(32,72,200,0.45)", marginBottom: 6 }}>Sales Pipeline</div>
               <div style={{ fontFamily: "'Archivo',sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em", color: "#2048C8" }}>Talent Radar</div>
