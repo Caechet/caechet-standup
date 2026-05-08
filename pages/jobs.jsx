@@ -1,13 +1,14 @@
-// pages/jobs.jsx — drop into your Next.js pages/ directory
 import Head from "next/head";
 import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// ─── design tokens (matches standup) ─────────────────────────────────────────
+// ─── design tokens (Caechet standup system) ───────────────────────────────────
 const B = {
   cobalt: "#2048C8", cobaltDark: "#0F2F8C", cobaltBright: "#4A74F5",
   banana: "#FCF1B8", carbon: "#0B0B0D", snow: "#FAF9F6",
   red: "#E03333", amber: "#D97706", green: "#16A34A",
+  // sign out button
+  return null;
 };
 const cobaltA = (a) => `rgba(32,72,200,${a})`;
 const bananaA = (a) => `rgba(252,241,184,${a})`;
@@ -33,6 +34,10 @@ function timeAgo(dateStr) {
 function freshness(dateStr) {
   if (!dateStr) return "unknown";
   const s = String(dateStr).toLowerCase();
+  // handle relative strings returned by the API
+  if (s.includes("just now") || s.includes("minute") || s.includes("hour") && !s.match(/[2-9]\d*\s*hour/) && !s.match(/1[0-9]\s*hour/)) {
+    if (s.match(/^(just|\d+\s*(m|min|minute|hour|hr))/)) return s.match(/hour|hr/) && s.match(/[2-9]\s*(hour|hr)/) ? "fresh" : "hot";
+  }
   if (s.match(/(\d+)\s*(h|hr|hour)s?/)) {
     const hrs = parseInt(s.match(/(\d+)\s*(h|hr|hour)s?/)[1]);
     if (hrs < 1) return "hot";
@@ -49,6 +54,7 @@ function freshness(dateStr) {
   if (s.includes("today") || s.includes("just")) return "fresh";
   if (s.includes("yesterday")) return "fresh";
   if (s.includes("week")) return "old";
+  // fall back to date parse
   const diff = (Date.now() - new Date(dateStr)) / 1000;
   if (isNaN(diff)) return "unknown";
   if (diff < 3600) return "hot";
@@ -113,28 +119,28 @@ Your ENTIRE response must be a single raw JSON object. Start with { and end with
   "summary": "2-3 sentence summary"
 }`;
 
-// ─── api (routes through your backend to keep key server-side) ────────────────
-async function callJobSearch(userMsg) {
-  const res = await fetch("/api/job-search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system: SEARCH_SYSTEM, userMsg, useSearch: true }),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+// ─── api ──────────────────────────────────────────────────────────────────────
+async function callClaude(system, userMsg, useSearch = false) {
+  const body = { model: "claude-sonnet-4-20250514", max_tokens: 8000, system, messages: [{ role: "user", content: userMsg }] };
+  if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
+  const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const allText = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+  if (!allText.trim()) throw new Error("Empty response from API");
+  const cleaned = allText.replace(/```json|```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  if (start === -1) throw new Error("No JSON found");
+  const jsonStr = cleaned.slice(start);
+  try { return JSON.parse(jsonStr); } catch {
+    const hits = []; const re = /\{[^{}]*"title"[^{}]*\}/g; let m;
+    while ((m = re.exec(jsonStr)) !== null) { try { hits.push(JSON.parse(m[0])); } catch {} }
+    if (hits.length) return { jobs: hits, total: hits.length, query: "" };
+    throw new Error("Malformed JSON");
+  }
 }
 
-async function callJobScrape(userMsg, useSearch) {
-  const res = await fetch("/api/job-search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system: SCRAPE_SYSTEM, userMsg, useSearch }),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
-
-// ─── ui atoms ─────────────────────────────────────────────────────────────────
+// ─── ui primitives ────────────────────────────────────────────────────────────
 function CaechetMark({ size = 28, color = B.banana }) {
   return (
     <svg width={size} height={size} viewBox="0 0 200 200" style={{ flexShrink: 0 }}>
@@ -150,12 +156,13 @@ function CaechetMark({ size = 28, color = B.banana }) {
 
 function Tag({ label, type = "default" }) {
   const S = {
-    dtc:    { bg: "rgba(176,107,224,0.1)", br: "rgba(176,107,224,0.3)", tx: "#b06be0" },
-    saas:   { bg: cobaltA(0.1),            br: cobaltA(0.3),            tx: B.cobaltBright },
-    new:    { bg: bananaA(0.18),           br: bananaA(0.45),           tx: "#806010" },
-    source: { bg: cobaltA(0.05),           br: cobaltA(0.12),           tx: cobaltA(0.55) },
-    salary: { bg: "rgba(22,163,74,0.08)",  br: "rgba(22,163,74,0.25)", tx: B.green },
-    default:{ bg: cobaltA(0.04),           br: cobaltA(0.1),            tx: cobaltA(0.5) },
+    dtc:     { bg: "rgba(176,107,224,0.1)", br: "rgba(176,107,224,0.3)", tx: "#b06be0" },
+    saas:    { bg: cobaltA(0.1),            br: cobaltA(0.3),            tx: B.cobaltBright },
+    new:     { bg: bananaA(0.18),           br: bananaA(0.45),           tx: "#806010" },
+    source:  { bg: cobaltA(0.05),           br: cobaltA(0.12),           tx: cobaltA(0.55) },
+    salary:  { bg: "rgba(22,163,74,0.08)",  br: "rgba(22,163,74,0.25)",  tx: B.green },
+    all:     { bg: cobaltA(0.04),           br: cobaltA(0.1),            tx: cobaltA(0.5) },
+    default: { bg: cobaltA(0.04),           br: cobaltA(0.1),            tx: cobaltA(0.5) },
   };
   const s = S[type] || S.default;
   return (
@@ -199,12 +206,14 @@ function Card({ children, accent = B.cobalt, style = {} }) {
   );
 }
 
+// ─── job card ─────────────────────────────────────────────────────────────────
 function JobCard({ job, isNew, onDetail }) {
   const f = freshness(job.postedAt);
   const fc = FRESH[f];
   return (
     <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${isNew ? bananaA(0.5) : cobaltA(0.1)}`, background: "#fff", boxShadow: isNew ? `0 2px 14px ${bananaA(0.2)}` : "0 1px 3px rgba(0,0,0,0.05)", animation: isNew ? "slideIn 0.3s ease" : "none" }}>
       {isNew && <div style={{ height: 3, background: B.banana }} />}
+      {/* header */}
       <div style={{ padding: "12px 18px", borderBottom: `1px solid ${cobaltA(0.07)}`, background: isNew ? bananaA(0.05) : cobaltA(0.02), display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span style={{ fontFamily: F.ui, fontWeight: 700, fontSize: 14, letterSpacing: "-0.01em", color: B.cobalt }}>{job.title}</span>
         {isNew && <Tag label="NEW" type="new" />}
@@ -216,6 +225,7 @@ function JobCard({ job, isNew, onDetail }) {
           </span>
         </div>
       </div>
+      {/* body */}
       <div style={{ padding: "12px 18px", display: "flex", gap: 14, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 13, color: B.carbon, marginBottom: 2 }}>
@@ -233,21 +243,22 @@ function JobCard({ job, isNew, onDetail }) {
           {job.url && (
             <a href={job.url} target="_blank" rel="noopener noreferrer"
               style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "6px 14px", background: cobaltA(0.06), color: B.cobalt, border: `1px solid ${cobaltA(0.15)}`, borderRadius: 8, textDecoration: "none", textAlign: "center", display: "block" }}
-              onMouseEnter={e => (e.currentTarget.style.background = cobaltA(0.12))}
-              onMouseLeave={e => (e.currentTarget.style.background = cobaltA(0.06))}
+              onMouseEnter={e => (e.target.style.background = cobaltA(0.12))}
+              onMouseLeave={e => (e.target.style.background = cobaltA(0.06))}
             >VIEW ↗</a>
           )}
           <button onClick={() => onDetail(job)}
-            style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "6px 14px", background: B.cobalt, color: B.banana, border: "none", borderRadius: 8, cursor: "pointer" }}>
-            DETAILS
-          </button>
+            style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "6px 14px", background: B.cobalt, color: B.banana, border: "none", borderRadius: 8, cursor: "pointer" }}
+            onMouseEnter={e => (e.target.style.opacity = "0.82")}
+            onMouseLeave={e => (e.target.style.opacity = "1")}
+          >DETAILS</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── page ─────────────────────────────────────────────────────────────────────
+// ─── app ──────────────────────────────────────────────────────────────────────
 export default function JobsPage() {
   const [tab, setTab] = useState("search");
   const [keyword, setKeyword] = useState("");
@@ -275,17 +286,17 @@ export default function JobsPage() {
   const [detailData, setDetailData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // load Make.com cached results on page mount
+  // auto-load Make.com cached results on page mount
   useEffect(() => {
     fetch("/api/job-results")
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (d?.fresh && d.jobs?.length > 0) {
+        if (d?.jobs?.length > 0) {
           const sorted = [...d.jobs].sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt));
           setAllJobs(sorted);
           setJobs(sorted);
           setCachedAt(d.cachedAt);
-          setLastSearched({ kw: "all keywords", loc: "United States", ind: "both" });
+          setLastSearched({ kw: "auto", loc: "United States", ind: "both" });
         }
       })
       .catch(() => {});
@@ -300,7 +311,7 @@ export default function JobsPage() {
         ? "Include all company types — DTC, SaaS, agencies, enterprises, startups, nonprofits, anything relevant."
         : "Only include DTC brands or SaaS companies.";
       const msg = `Search for "${kw}" jobs at ${indLabel} in ${loc || "the United States"}.\nCrawl LinkedIn, Wellfound, BuiltIn, Greenhouse boards, Lever boards, Workday, Glassdoor, ZipRecruiter.\nOnly include US-based or Remote-US roles. ${indFilter}`;
-      const data = await callJobSearch(msg);
+      const data = await callClaude(SEARCH_SYSTEM, msg, true);
       const incoming = (data.jobs || []).map(j => ({ ...j, id: j.id || `${j.company}-${j.title}-${Date.now()}`.replace(/\s/g, "") }));
       if (isAlert) {
         setJobs(prev => {
@@ -323,15 +334,7 @@ export default function JobsPage() {
   }, []);
 
   useEffect(() => {
-    if (lastSearched && keyword.trim()) {
-      doSearch(keyword, locationFilter, industryFilter);
-    }
-  }, [industryFilter]);
-
-  useEffect(() => {
-    if (alertEnabled && alertKeyword) {
-      intervalRef.current = setInterval(() => doSearch(alertKeyword, locationFilter, industryFilter, true), alertInterval * 60000);
-    }
+    if (alertEnabled && alertKeyword) intervalRef.current = setInterval(() => doSearch(alertKeyword, locationFilter, industryFilter, true), alertInterval * 60000);
     return () => clearInterval(intervalRef.current);
   }, [alertEnabled, alertKeyword, alertInterval, locationFilter, industryFilter, doSearch]);
 
@@ -339,7 +342,7 @@ export default function JobsPage() {
     setDetailJob(job); setDetailData(null);
     if (!job.url) return;
     setDetailLoading(true);
-    try { setDetailData(await callJobScrape(`Extract job posting from: ${job.url}`, true)); } catch {}
+    try { setDetailData(await callClaude(SCRAPE_SYSTEM, `Extract job posting from: ${job.url}`, true)); } catch {}
     setDetailLoading(false);
   };
 
@@ -348,7 +351,7 @@ export default function JobsPage() {
     setScraping(true); setScrapeErr(null); setScrapeResult(null);
     try {
       const msg = scrapeMode === "url" ? `Extract job posting from URL: ${scrapeInput.trim()}` : `Extract job posting from text:\n\n${scrapeInput.trim()}`;
-      setScrapeResult(await callJobScrape(msg, scrapeMode === "url"));
+      setScrapeResult(await callClaude(SCRAPE_SYSTEM, msg, scrapeMode === "url"));
     } catch { setScrapeErr("Could not parse. Try pasting text instead."); }
     setScraping(false);
   };
@@ -360,26 +363,28 @@ export default function JobsPage() {
       <Head>
         <title>CÆCHET · Job Monitor</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Lato:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-        <style>{`
-          *{box-sizing:border-box;margin:0;padding:0}
-          @keyframes spin{to{transform:rotate(360deg)}}
-          @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-          @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-          button{transition:opacity 0.1s;cursor:pointer}
-          button:hover{opacity:0.82}
-          input:focus,textarea:focus{outline:none;border-color:rgba(32,72,200,0.5)!important}
-          ::-webkit-scrollbar{width:3px;height:3px}
-          ::-webkit-scrollbar-track{background:transparent}
-          ::-webkit-scrollbar-thumb{background:rgba(32,72,200,0.3);border-radius:2px}
-          ::placeholder{color:rgba(32,72,200,0.28)}
-        `}</style>
       </Head>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Lato:wght@400;600;700;800;900&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        button{transition:opacity 0.1s;cursor:pointer}
+        button:hover{opacity:0.82}
+        input:focus,textarea:focus{outline:none;border-color:rgba(32,72,200,0.5)!important}
+        ::-webkit-scrollbar{width:3px;height:3px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(32,72,200,0.3);border-radius:2px}
+        ::placeholder{color:rgba(32,72,200,0.28)}
+        tr:hover td{background:rgba(32,72,200,0.03)!important}
+      `}</style>
 
-      {/* HEADER */}
+      {/* ── HEADER ── */}
       <div style={{ background: B.cobalt }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 40px 0" }}>
 
+          {/* live alert banner */}
           {alertEnabled && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "rgba(0,0,0,0.15)", padding: "9px 16px", marginBottom: 20, borderRadius: 8, borderLeft: `3px solid ${B.banana}` }}>
               <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: B.banana, letterSpacing: "0.12em", whiteSpace: "nowrap", paddingTop: 1 }}>LIVE WATCH</span>
@@ -390,6 +395,7 @@ export default function JobsPage() {
             </div>
           )}
 
+          {/* logo row */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
               <CaechetMark size={44} color={B.banana} />
@@ -403,7 +409,8 @@ export default function JobsPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            {/* stat pills */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {[
                 { n: jobs.length, label: "found" },
                 { n: jobs.filter(j => newIds.has(j.id)).length, label: "new", hi: jobs.filter(j => newIds.has(j.id)).length > 0 },
@@ -418,21 +425,21 @@ export default function JobsPage() {
               {notifCount > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: "rgba(224,51,51,0.2)", borderRadius: 20, border: "1px solid rgba(224,51,51,0.4)" }}>
                   <span style={{ fontFamily: F.display, fontSize: 15, fontWeight: 800, color: "#F87171", lineHeight: 1 }}>{notifCount}</span>
-                  <span style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 600, color: "rgba(248,113,113,0.7)", letterSpacing: "0.1em" }}>ALERTS</span>
+                  <span style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 600, color: "rgba(248,113,113,0.7)", letterSpacing: "0.1em", textTransform: "uppercase" }}>alerts</span>
                 </div>
               )}
-              {/* nav back to standup */}
-              <Link href="/" style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "7px 14px", background: "rgba(255,255,255,0.08)", color: bananaA(0.6), border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, textDecoration: "none", marginLeft: 8 }}>
-                ← STANDUP
-              </Link>
             </div>
+            <Link href="/" style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "7px 14px", background: "rgba(255,255,255,0.08)", color: bananaA(0.6), border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, textDecoration: "none", marginLeft: 8 }}>
+              ← STANDUP
+            </Link>
           </div>
 
           <div style={{ marginTop: 16, fontFamily: F.mono, fontSize: 9, fontWeight: 600, letterSpacing: "0.26em", color: bananaA(0.38) }}>STAY DANGEROUS · BE HUMAN</div>
 
-          <div style={{ display: "flex", gap: 2, marginTop: 20 }}>
+          {/* tabs */}
+          <div style={{ display: "flex", gap: 2, marginTop: 20, alignItems: "flex-end" }}>
             {[{ id: "search", label: "SEARCH" }, { id: "scrape", label: "SCRAPER" }].map(({ id, label }) => (
-              <button key={id} onClick={() => setTab(id)} style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", padding: "10px 22px", background: tab === id ? "#fff" : "transparent", color: tab === id ? B.cobalt : bananaA(0.45), border: "none", borderRadius: "8px 8px 0 0", cursor: "pointer" }}>
+              <button key={id} onClick={() => setTab(id)} style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", padding: "10px 22px", background: tab === id ? "#fff" : "transparent", color: tab === id ? B.cobalt : bananaA(0.45), border: "none", borderRadius: "8px 8px 0 0", cursor: "pointer", transition: "all 0.15s" }}>
                 {label}
               </button>
             ))}
@@ -440,12 +447,14 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {/* BODY */}
+      {/* ── BODY ── */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 40px 80px", display: "flex", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
 
+          {/* ══ SEARCH TAB ══ */}
           {tab === "search" && (
             <>
+              {/* search card */}
               <Card accent={B.cobalt} style={{ marginBottom: 12 }}>
                 <MonoLabel>Search</MonoLabel>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -461,18 +470,24 @@ export default function JobsPage() {
                     {searching ? <><Spinner /> SEARCHING</> : "SEARCH"}
                   </CobaltBtn>
                 </div>
+
+                {/* industry filters */}
                 <div style={{ display: "flex", gap: 6, marginTop: 14, alignItems: "center", flexWrap: "wrap" }}>
                   <span style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 700, color: cobaltA(0.38), letterSpacing: "0.12em", marginRight: 4 }}>INDUSTRY</span>
                   {[["both", "DTC + SaaS"], ["dtc", "DTC"], ["saas", "SaaS"], ["all", "All"]].map(([val, label]) => (
-                    <button key={val} onClick={() => { setIndustryFilter(val); setJobs(val === "all" ? allJobs : val === "both" ? allJobs.filter(j => !j.companyType || j.companyType.toLowerCase().includes("dtc") || j.companyType.toLowerCase().includes("saas")) : allJobs.filter(j => j.companyType && j.companyType.toLowerCase().includes(val.toLowerCase()))); }} style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "5px 14px", borderRadius: 20, border: `1px solid ${industryFilter === val ? B.cobalt : cobaltA(0.14)}`, background: industryFilter === val ? cobaltA(0.08) : "#FAFBFF", color: industryFilter === val ? B.cobalt : cobaltA(0.38), cursor: "pointer" }}>{label}</button>
+                    <button key={val} onClick={() => { setIndustryFilter(val); setJobs(val === "all" ? allJobs : val === "both" ? allJobs.filter(j => !j.companyType || j.companyType.toLowerCase().includes("dtc") || j.companyType.toLowerCase().includes("saas")) : allJobs.filter(j => j.companyType && j.companyType.toLowerCase().includes(val.toLowerCase()))); }} style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "5px 14px", borderRadius: 20, border: `1px solid ${industryFilter === val ? B.cobalt : cobaltA(0.14)}`, background: industryFilter === val ? cobaltA(0.08) : "#FAFBFF", color: industryFilter === val ? B.cobalt : cobaltA(0.38), cursor: "pointer", transition: "all 0.15s" }}>{label}</button>
                   ))}
                 </div>
               </Card>
 
+              {/* alert card */}
               <Card accent={B.cobaltBright} style={{ marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                   <MonoLabel style={{ marginBottom: 0 }}>
-                    {alertEnabled ? <><span style={{ width: 7, height: 7, borderRadius: "50%", background: B.cobalt, display: "inline-block", animation: "pulse 1.5s ease-in-out infinite", marginRight: 6 }} />Alert Active</> : "Alert Monitor"}
+                    {alertEnabled
+                      ? <><span style={{ width: 7, height: 7, borderRadius: "50%", background: B.cobalt, display: "inline-block", animation: "pulse 1.5s ease-in-out infinite", marginRight: 6 }} />Alert Active</>
+                      : "Alert Monitor"
+                    }
                   </MonoLabel>
                   <Inp value={alertKeyword} onChange={e => setAlertKeyword(e.target.value)} placeholder="Keyword to watch..." style={{ flex: "none", width: 190 }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -490,29 +505,31 @@ export default function JobsPage() {
                 </div>
               </Card>
 
+              {/* error */}
               {searchErr && (
-                <div style={{ background: "rgba(224,51,51,0.06)", border: "1px solid rgba(224,51,51,0.22)", borderRadius: 10, padding: "12px 18px", marginBottom: 14, display: "flex", gap: 10 }}>
-                  <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: B.red, letterSpacing: "0.1em" }}>ERROR</span>
+                <div style={{ background: "rgba(224,51,51,0.06)", border: "1px solid rgba(224,51,51,0.22)", borderRadius: 10, padding: "12px 18px", marginBottom: 14, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: B.red, letterSpacing: "0.1em", whiteSpace: "nowrap" }}>ERROR</span>
                   <span style={{ fontSize: 12, color: B.carbon, fontFamily: F.body }}>{searchErr}</span>
                 </div>
               )}
 
+              {/* results header */}
               {lastSearched && jobs.length > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                   <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: cobaltA(0.45), letterSpacing: "0.1em" }}>
-                    {jobs.length} RESULTS{lastSearched.ind && lastSearched.ind !== "both" ? ` · ${lastSearched.ind.toUpperCase()}` : ""} · NEWEST FIRST
-                    {cachedAt && <span style={{ color: B.green, marginLeft: 10 }}>· AUTO-UPDATED {new Date(cachedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>}
+                    {jobs.length} RESULTS{lastSearched.ind && lastSearched.ind !== "both" ? ` · ${lastSearched.ind.toUpperCase()}` : ""} · NEWEST FIRST{cachedAt ? <span style={{color:B.green,marginLeft:10}}>· AUTO-UPDATED {new Date(cachedAt).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</span> : lastSearched.kw !== "auto" ? <span style={{marginLeft:8}}>· "{lastSearched.kw.toUpperCase()}"</span> : null}
                   </span>
                   <div style={{ display: "flex", gap: 14 }}>
-                    {[["hot", "< 1h", B.red], ["fresh", "< 24h", B.amber], ["recent", "< 3d", B.green]].map(([f, l, col]) => (
-                      <span key={f} style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: F.mono, fontSize: 8, color: cobaltA(0.4) }}>
-                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: col, display: "inline-block" }} />{l}
+                    {[["hot","< 1h",B.red],["fresh","< 24h",B.amber],["recent","< 3d",B.green]].map(([f,l,col])=>(
+                      <span key={f} style={{ display:"flex",alignItems:"center",gap:5,fontFamily:F.mono,fontSize:8,color:cobaltA(0.4) }}>
+                        <span style={{ width:7,height:7,borderRadius:"50%",background:col,display:"inline-block" }}/>{l}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* empty state */}
               {jobs.length === 0 && !searching && !searchErr && (
                 <div style={{ background: "#fff", borderRadius: 12, border: `1px solid ${cobaltA(0.08)}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "64px 20px", gap: 16 }}>
                   <CaechetMark size={40} color={cobaltA(0.1)} />
@@ -527,56 +544,57 @@ export default function JobsPage() {
             </>
           )}
 
+          {/* ══ SCRAPER TAB ══ */}
           {tab === "scrape" && (
             <>
               <Card accent={B.cobalt} style={{ marginBottom: 20 }}>
                 <MonoLabel>Extract Job Posting</MonoLabel>
                 <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-                  {["url", "text"].map(m => (
-                    <button key={m} onClick={() => { setScrapeMode(m); setScrapeInput(""); }} style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "5px 14px", borderRadius: 20, border: `1px solid ${scrapeMode === m ? B.cobalt : cobaltA(0.14)}`, background: scrapeMode === m ? cobaltA(0.08) : "#FAFBFF", color: scrapeMode === m ? B.cobalt : cobaltA(0.35), cursor: "pointer" }}>
-                      {m === "url" ? "URL" : "PASTE TEXT"}
+                  {["url","text"].map(m => (
+                    <button key={m} onClick={() => { setScrapeMode(m); setScrapeInput(""); }} style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "5px 14px", borderRadius: 20, border: `1px solid ${scrapeMode===m?B.cobalt:cobaltA(0.14)}`, background: scrapeMode===m?cobaltA(0.08):"#FAFBFF", color: scrapeMode===m?B.cobalt:cobaltA(0.35), cursor: "pointer" }}>
+                      {m==="url"?"URL":"PASTE TEXT"}
                     </button>
                   ))}
                 </div>
                 {scrapeMode === "url"
-                  ? <Inp value={scrapeInput} onChange={e => setScrapeInput(e.target.value)} onKeyDown={e => e.key === "Enter" && doScrape()} placeholder="https://jobs.company.com/posting/..." />
-                  : <textarea value={scrapeInput} onChange={e => setScrapeInput(e.target.value)} placeholder="Paste job posting text..." rows={5} style={{ width: "100%", background: "#FAFBFF", border: `1px solid ${cobaltA(0.15)}`, borderRadius: 8, color: B.carbon, padding: "10px 14px", fontSize: 12, fontFamily: F.body, resize: "vertical", outline: "none", lineHeight: 1.6 }} onFocus={e => (e.target.style.borderColor = cobaltA(0.5))} onBlur={e => (e.target.style.borderColor = cobaltA(0.15))} />
+                  ? <Inp value={scrapeInput} onChange={e=>setScrapeInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doScrape()} placeholder="https://jobs.company.com/posting/..." />
+                  : <textarea value={scrapeInput} onChange={e=>setScrapeInput(e.target.value)} placeholder="Paste job posting text..." rows={5} style={{ width:"100%",background:"#FAFBFF",border:`1px solid ${cobaltA(0.15)}`,borderRadius:8,color:B.carbon,padding:"10px 14px",fontSize:12,fontFamily:F.body,resize:"vertical",outline:"none",lineHeight:1.6 }} onFocus={e=>(e.target.style.borderColor=cobaltA(0.5))} onBlur={e=>(e.target.style.borderColor=cobaltA(0.15))} />
                 }
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-                  <CobaltBtn onClick={doScrape} disabled={scraping || !scrapeInput.trim()}>{scraping ? <><Spinner />EXTRACTING</> : "EXTRACT"}</CobaltBtn>
+                <div style={{ display:"flex",justifyContent:"flex-end",marginTop:12 }}>
+                  <CobaltBtn onClick={doScrape} disabled={scraping||!scrapeInput.trim()}>{scraping?<><Spinner/>EXTRACTING</>:"EXTRACT"}</CobaltBtn>
                 </div>
               </Card>
 
               {scrapeErr && (
-                <div style={{ background: "rgba(224,51,51,0.06)", border: "1px solid rgba(224,51,51,0.22)", borderRadius: 10, padding: "12px 18px", marginBottom: 16, display: "flex", gap: 10 }}>
-                  <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: B.red, letterSpacing: "0.1em" }}>ERROR</span>
-                  <span style={{ fontSize: 12, color: B.carbon, fontFamily: F.body }}>{scrapeErr}</span>
+                <div style={{ background:"rgba(224,51,51,0.06)",border:"1px solid rgba(224,51,51,0.22)",borderRadius:10,padding:"12px 18px",marginBottom:16,display:"flex",gap:10 }}>
+                  <span style={{ fontFamily:F.mono,fontSize:9,fontWeight:700,color:B.red,letterSpacing:"0.1em" }}>ERROR</span>
+                  <span style={{ fontSize:12,color:B.carbon,fontFamily:F.body }}>{scrapeErr}</span>
                 </div>
               )}
 
               {scrapeResult && (
                 <Card accent={B.cobaltBright}>
-                  <div style={{ background: cobaltA(0.03), borderRadius: 10, border: `1px solid ${cobaltA(0.08)}`, padding: "16px 20px", marginBottom: 18 }}>
-                    <div style={{ fontFamily: F.ui, fontSize: 18, fontWeight: 700, color: B.cobalt, marginBottom: 4 }}>{scrapeResult.title || "—"}</div>
-                    <div style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.55), marginBottom: 8 }}>{[scrapeResult.company, scrapeResult.location, scrapeResult.type].filter(Boolean).join(" · ")}</div>
-                    {scrapeResult.summary && <p style={{ fontSize: 12, color: cobaltA(0.65), lineHeight: 1.7, fontFamily: F.body, margin: 0 }}>{scrapeResult.summary}</p>}
+                  <div style={{ background:cobaltA(0.03),borderRadius:10,border:`1px solid ${cobaltA(0.08)}`,padding:"16px 20px",marginBottom:18 }}>
+                    <div style={{ fontFamily:F.ui,fontSize:18,fontWeight:700,color:B.cobalt,marginBottom:4 }}>{scrapeResult.title||"—"}</div>
+                    <div style={{ fontFamily:F.mono,fontSize:10,color:cobaltA(0.55),marginBottom:8 }}>{[scrapeResult.company,scrapeResult.location,scrapeResult.type].filter(Boolean).join(" · ")}</div>
+                    {scrapeResult.summary&&<p style={{ fontSize:12,color:cobaltA(0.65),lineHeight:1.7,fontFamily:F.body,margin:0 }}>{scrapeResult.summary}</p>}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-                    {[["SALARY", scrapeResult.salary], ["EXPERIENCE", scrapeResult.experience], ["TYPE", scrapeResult.type], ["POSTED", scrapeResult.postedAt ? timeAgo(scrapeResult.postedAt) : null]].map(([label, val]) =>
-                      val ? (<div key={label} style={{ background: cobaltA(0.03), borderRadius: 8, padding: "10px 14px", border: `1px solid ${cobaltA(0.08)}` }}>
-                        <div style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 700, color: cobaltA(0.4), letterSpacing: "0.12em", marginBottom: 4 }}>{label}</div>
-                        <div style={{ fontSize: 13, color: B.carbon, fontFamily: F.body }}>{val}</div>
-                      </div>) : null
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14 }}>
+                    {[["SALARY",scrapeResult.salary],["EXPERIENCE",scrapeResult.experience],["TYPE",scrapeResult.type],["POSTED",scrapeResult.postedAt?timeAgo(scrapeResult.postedAt):null]].map(([label,val])=>
+                      val?(<div key={label} style={{ background:cobaltA(0.03),borderRadius:8,padding:"10px 14px",border:`1px solid ${cobaltA(0.08)}` }}>
+                        <div style={{ fontFamily:F.mono,fontSize:8,fontWeight:700,color:cobaltA(0.4),letterSpacing:"0.12em",marginBottom:4 }}>{label}</div>
+                        <div style={{ fontSize:13,color:B.carbon,fontFamily:F.body }}>{val}</div>
+                      </div>):null
                     )}
                   </div>
-                  {[["SKILLS", scrapeResult.skills], ["RESPONSIBILITIES", scrapeResult.responsibilities], ["BENEFITS", scrapeResult.benefits]].map(([label, items]) =>
-                    items?.length ? (<div key={label} style={{ background: cobaltA(0.02), borderRadius: 8, padding: "12px 14px", marginBottom: 10, border: `1px solid ${cobaltA(0.07)}` }}>
-                      <div style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 700, color: cobaltA(0.4), letterSpacing: "0.12em", marginBottom: 10 }}>{label}</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{items.map((item, i) => <Tag key={i} label={item} />)}</div>
-                    </div>) : null
+                  {[["SKILLS",scrapeResult.skills],["RESPONSIBILITIES",scrapeResult.responsibilities],["BENEFITS",scrapeResult.benefits]].map(([label,items])=>
+                    items?.length?(<div key={label} style={{ background:cobaltA(0.02),borderRadius:8,padding:"12px 14px",marginBottom:10,border:`1px solid ${cobaltA(0.07)}` }}>
+                      <div style={{ fontFamily:F.mono,fontSize:8,fontWeight:700,color:cobaltA(0.4),letterSpacing:"0.12em",marginBottom:10 }}>{label}</div>
+                      <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>{items.map((item,i)=><Tag key={i} label={item}/>)}</div>
+                    </div>):null
                   )}
-                  <div style={{ paddingTop: 14, borderTop: `1px solid ${cobaltA(0.08)}` }}>
-                    <button onClick={() => navigator.clipboard.writeText(JSON.stringify(scrapeResult, null, 2))} style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "7px 16px", borderRadius: 8, border: `1px solid ${cobaltA(0.14)}`, background: "#FAFBFF", color: cobaltA(0.55), cursor: "pointer" }}>COPY JSON</button>
+                  <div style={{ paddingTop:14,borderTop:`1px solid ${cobaltA(0.08)}` }}>
+                    <button onClick={()=>navigator.clipboard.writeText(JSON.stringify(scrapeResult,null,2))} style={{ fontFamily:F.mono,fontSize:9,fontWeight:700,letterSpacing:"0.1em",padding:"7px 16px",borderRadius:8,border:`1px solid ${cobaltA(0.14)}`,background:"#FAFBFF",color:cobaltA(0.55),cursor:"pointer" }}>COPY JSON</button>
                   </div>
                 </Card>
               )}
@@ -584,27 +602,27 @@ export default function JobsPage() {
           )}
         </div>
 
-        {/* detail panel */}
+        {/* ── DETAIL PANEL ── */}
         {detailJob && (
-          <div style={{ width: 300, flexShrink: 0, background: "#fff", borderRadius: 12, border: `1px solid ${cobaltA(0.1)}`, borderLeft: `4px solid ${B.cobaltBright}`, boxShadow: "0 2px 12px rgba(32,72,200,0.08)", padding: "20px", position: "sticky", top: 28, maxHeight: "calc(100vh - 56px)", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <MonoLabel style={{ marginBottom: 0 }}>Detail</MonoLabel>
-              <button onClick={() => { setDetailJob(null); setDetailData(null); }} style={{ fontFamily: F.mono, fontSize: 11, color: cobaltA(0.35), background: "transparent", border: "none", cursor: "pointer", padding: "2px 6px" }}>✕</button>
+          <div style={{ width:300,flexShrink:0,background:"#fff",borderRadius:12,border:`1px solid ${cobaltA(0.1)}`,borderLeft:`4px solid ${B.cobaltBright}`,boxShadow:"0 2px 12px rgba(32,72,200,0.08)",padding:"20px",position:"sticky",top:28,maxHeight:"calc(100vh - 56px)",overflowY:"auto" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+              <MonoLabel style={{ marginBottom:0 }}>Detail</MonoLabel>
+              <button onClick={()=>{setDetailJob(null);setDetailData(null);}} style={{ fontFamily:F.mono,fontSize:11,color:cobaltA(0.35),background:"transparent",border:"none",cursor:"pointer",padding:"2px 6px" }}>✕</button>
             </div>
-            <div style={{ fontFamily: F.ui, fontSize: 14, fontWeight: 700, color: B.cobalt, marginBottom: 4, lineHeight: 1.3 }}>{detailJob.title}</div>
-            <div style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.55), marginBottom: 3 }}>{detailJob.company}</div>
-            <div style={{ fontFamily: F.mono, fontSize: 9, color: cobaltA(0.4), marginBottom: 14 }}>{detailJob.location}</div>
-            {detailJob.snippet && <p style={{ fontSize: 12, color: cobaltA(0.65), lineHeight: 1.7, fontFamily: F.body, marginBottom: 16 }}>{detailJob.snippet}</p>}
-            {detailJob.url && <a href={detailJob.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", padding: "9px 14px", background: B.cobalt, color: B.banana, borderRadius: 8, textDecoration: "none", marginBottom: 18, textAlign: "center" }}>↗ VIEW POSTING</a>}
-            {detailLoading && <div style={{ textAlign: "center", padding: "20px 0", fontFamily: F.mono, fontSize: 10, color: cobaltA(0.4), display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><Spinner />Loading...</div>}
-            {detailData && (
+            <div style={{ fontFamily:F.ui,fontSize:14,fontWeight:700,color:B.cobalt,marginBottom:4,lineHeight:1.3 }}>{detailJob.title}</div>
+            <div style={{ fontFamily:F.mono,fontSize:10,color:cobaltA(0.55),marginBottom:3 }}>{detailJob.company}</div>
+            <div style={{ fontFamily:F.mono,fontSize:9,color:cobaltA(0.4),marginBottom:14 }}>{detailJob.location}</div>
+            {detailJob.snippet&&<p style={{ fontSize:12,color:cobaltA(0.65),lineHeight:1.7,fontFamily:F.body,marginBottom:16 }}>{detailJob.snippet}</p>}
+            {detailJob.url&&<a href={detailJob.url} target="_blank" rel="noopener noreferrer" style={{ display:"block",fontFamily:F.mono,fontSize:9,fontWeight:700,letterSpacing:"0.08em",padding:"9px 14px",background:B.cobalt,color:B.banana,borderRadius:8,textDecoration:"none",marginBottom:18,textAlign:"center" }}>↗ VIEW POSTING</a>}
+            {detailLoading&&<div style={{ textAlign:"center",padding:"20px 0",fontFamily:F.mono,fontSize:10,color:cobaltA(0.4),display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}><Spinner/>Loading...</div>}
+            {detailData&&(
               <div>
-                {detailData.summary && <p style={{ fontSize: 12, color: B.carbon, lineHeight: 1.7, fontFamily: F.body, marginBottom: 16, padding: "12px 14px", background: cobaltA(0.03), borderRadius: 8, border: `1px solid ${cobaltA(0.07)}` }}>{detailData.summary}</p>}
-                {[["SKILLS", detailData.skills], ["RESPONSIBILITIES", detailData.responsibilities], ["BENEFITS", detailData.benefits]].map(([label, items]) =>
-                  items?.length ? (<div key={label} style={{ marginBottom: 14 }}>
-                    <div style={{ fontFamily: F.mono, fontSize: 8, fontWeight: 700, color: cobaltA(0.4), letterSpacing: "0.12em", marginBottom: 8 }}>{label}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{items.map((item, i) => <Tag key={i} label={item} />)}</div>
-                  </div>) : null
+                {detailData.summary&&<p style={{ fontSize:12,color:B.carbon,lineHeight:1.7,fontFamily:F.body,marginBottom:16,padding:"12px 14px",background:cobaltA(0.03),borderRadius:8,border:`1px solid ${cobaltA(0.07)}` }}>{detailData.summary}</p>}
+                {[["SKILLS",detailData.skills],["RESPONSIBILITIES",detailData.responsibilities],["BENEFITS",detailData.benefits]].map(([label,items])=>
+                  items?.length?(<div key={label} style={{ marginBottom:14 }}>
+                    <div style={{ fontFamily:F.mono,fontSize:8,fontWeight:700,color:cobaltA(0.4),letterSpacing:"0.12em",marginBottom:8 }}>{label}</div>
+                    <div style={{ display:"flex",flexWrap:"wrap",gap:5 }}>{items.map((item,i)=><Tag key={i} label={item}/>)}</div>
+                  </div>):null
                 )}
               </div>
             )}
@@ -613,28 +631,20 @@ export default function JobsPage() {
       </div>
 
       {/* footer */}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 40px 40px" }}>
-        <div style={{ height: 1, background: cobaltA(0.08), marginBottom: 20 }} />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: cobaltA(0.28), letterSpacing: "0.1em" }}>LAST UPDATED · {DATE_LABEL}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <CaechetMark size={14} color={cobaltA(0.18)} />
-            <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, letterSpacing: "0.18em", color: cobaltA(0.28) }}>STAY DANGEROUS · BE HUMAN</span>
+      <div style={{ maxWidth:1100,margin:"0 auto",padding:"0 40px 40px" }}>
+        <div style={{ height:1,background:cobaltA(0.08),marginBottom:20 }}/>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <span style={{ fontFamily:F.mono,fontSize:9,fontWeight:600,color:cobaltA(0.28),letterSpacing:"0.1em" }}>LAST UPDATED · {DATE_LABEL}</span>
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <CaechetMark size={14} color={cobaltA(0.18)}/>
+            <span style={{ fontFamily:F.mono,fontSize:9,fontWeight:600,letterSpacing:"0.18em",color:cobaltA(0.28) }}>STAY DANGEROUS · BE HUMAN</span>
           </div>
         </div>
-      </div>
-
-      {/* sign out */}
-      <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 100 }}>
-        <a href="/api/logout" style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "8px 14px", background: cobaltA(0.08), color: cobaltA(0.5), border: `1px solid ${cobaltA(0.12)}`, borderRadius: 20, textDecoration: "none", display: "inline-block" }}>
-          SIGN OUT
-        </a>
       </div>
     </div>
   );
 }
 
-// same auth pattern as your standup page
 export async function getServerSideProps({ req }) {
   const cookie = req.headers.cookie || "";
   const isAuthed = cookie.includes("caechet_auth=1");
