@@ -522,14 +522,27 @@ export default function App() {
             </div>
           </div>
           <Tbl heads={["Day","Brand","Campaign","Type","Status","Note"]}
-            rows={WEEKLY.map(c=>[
-              <span style={{ fontFamily:F.mono, fontSize:10, fontWeight:700, color:B.cobalt }}>{c.day}</span>,
-              <div><span style={{ fontFamily:F.ui, fontWeight:700, fontSize:12, color:B.carbon }}>{c.brand}</span>{c.sub&&<span style={{ fontFamily:F.mono, fontSize:8, color:cobaltA(0.5), marginLeft:6 }}>{c.sub}</span>}</div>,
-              <span style={{ fontFamily:F.mono, fontSize:10, color:B.carbon }}>{c.name}</span>,
-              <span style={{ fontFamily:F.mono, fontSize:8, fontWeight:600, padding:"3px 8px", background:c.type&&c.type.includes("EMAIL")?cobaltA(0.1):"rgba(22,163,74,0.1)", color:c.type&&c.type.includes("EMAIL")?B.cobalt:"#16A34A", border:`1px solid ${c.type&&c.type.includes("EMAIL")?cobaltA(0.2):"rgba(22,163,74,0.2)"}`, borderRadius:20 }}>{c.type}</span>,
-              <Tag label={c.s==="deploy"?"DEPLOY TODAY":c.s==="done"?"DEPLOYED":c.s==="blocked"?"BLOCKED":"PREP"} s={c.s}/>,
-              <span style={{ color:c.s==="blocked"?ST.critical.tx:c.s==="done"?ST.done.tx:B.carbon, fontSize:11, fontFamily:F.body }}>{c.note}</span>
-            ])} flagFn={ri=>WEEKLY[ri]?.s==="blocked"}/>
+            rows={WEEKLY.map(c=>{
+              const isDone = c.s === "done";
+              const isBlocked = c.s === "blocked";
+              const isDeploy = c.s === "deploy";
+              const fade = isDone ? 0.4 : 1;
+              return [
+                <span style={{ fontFamily:F.mono, fontSize:10, fontWeight:700, color:isDone?cobaltA(0.35):B.cobalt, textDecoration:isDone?"line-through":"none" }}>{c.day}</span>,
+                <div style={{ opacity: fade }}>
+                  <span style={{ fontFamily:F.ui, fontWeight:700, fontSize:12, color:B.carbon }}>{c.brand}</span>
+                  {c.sub&&<span style={{ fontFamily:F.mono, fontSize:8, color:cobaltA(0.5), marginLeft:6 }}>{c.sub}</span>}
+                </div>,
+                <span style={{ fontFamily:F.mono, fontSize:10, color:isDone?cobaltA(0.4):B.carbon, textDecoration:isDone?"line-through":"none" }}>{c.name}</span>,
+                <span style={{ fontFamily:F.mono, fontSize:8, fontWeight:600, padding:"3px 8px", opacity: isDone ? 0.5 : 1,
+                  background:c.type&&c.type.includes("EMAIL")?cobaltA(0.1):"rgba(22,163,74,0.1)",
+                  color:c.type&&c.type.includes("EMAIL")?B.cobalt:"#16A34A",
+                  border:`1px solid ${c.type&&c.type.includes("EMAIL")?cobaltA(0.2):"rgba(22,163,74,0.2)"}`,
+                  borderRadius:20 }}>{c.type}</span>,
+                <Tag label={isDeploy?"DEPLOY TODAY":isDone?"DEPLOYED":isBlocked?"BLOCKED":"PREP"} s={c.s}/>,
+                <span style={{ color:isBlocked?ST.critical.tx:isDone?cobaltA(0.4):B.carbon, fontSize:11, fontFamily:F.body, fontStyle:isDone?"italic":"normal" }}>{c.note}</span>
+              ];
+            })} flagFn={ri=>WEEKLY[ri]?.s==="blocked"}/>
           <SectionNotes storageKey="standup:campaign-notes" itemLabel="Campaign"
             selectItems={WEEKLY.map(c=>({ value:c.name, label:`${c.day} · ${c.brand}${c.sub?" ("+c.sub+")":""} — ${c.name}` }))}/>
         </Sec>
