@@ -48,14 +48,12 @@ export default function IndexPage() {
         <div style={{ fontFamily: "'Archivo',sans-serif", fontWeight: 900, fontSize: 50, letterSpacing: "-0.04em", lineHeight: 1, color: "#fff", marginBottom: 8 }}>
           {greeting},<br />team.
         </div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", letterSpacing: "0.08em", fontWeight: 600 }}>
-          {stats.deploys > 0 ? `${stats.deploys} DEPLOY${stats.deploys > 1 ? "S" : ""} TODAY` : "NO DEPLOYS TODAY"}
-          {stats.talent > 0 ? ` · ${stats.talent} TALENT HITS` : ""}
-        </div>
+
       </div>
 
-      <div style={{ padding: "28px 40px" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.18em", color: "rgba(255,255,255,0.2)", marginBottom: 14 }}>WHERE DO YOU WANT TO GO?</div>
+      <div style={{ padding: "52px 40px", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 640 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", color: "#fff", fontFamily: "'Archivo',sans-serif" }}>Where do you<br/>want to go?</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
 
           <Link href="/standup" className="card" style={{ background: "#FCF1B8", borderRadius: 14, padding: "24px 26px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 138, transition: "transform 0.2s" }}>
