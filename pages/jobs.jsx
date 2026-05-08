@@ -259,6 +259,7 @@ export default function JobsPage() {
   const [searching, setSearching] = useState(false);
   const [searchErr, setSearchErr] = useState(null);
   const [lastSearched, setLastSearched] = useState(null);
+  const [cachedAt, setCachedAt] = useState(null);
   const [alertEnabled, setAlertEnabled] = useState(false);
   const [alertInterval, setAlertInterval] = useState(5);
   const [alertKeyword, setAlertKeyword] = useState("");
@@ -273,6 +274,22 @@ export default function JobsPage() {
   const [detailJob, setDetailJob] = useState(null);
   const [detailData, setDetailData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // load Make.com cached results on page mount
+  useEffect(() => {
+    fetch("/api/job-results")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.fresh && d.jobs?.length > 0) {
+          const sorted = [...d.jobs].sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt));
+          setAllJobs(sorted);
+          setJobs(sorted);
+          setCachedAt(d.cachedAt);
+          setLastSearched({ kw: "all keywords", loc: "United States", ind: "both" });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const doSearch = useCallback(async (kw, loc, ind, isAlert = false) => {
     if (!kw.trim()) return;
@@ -483,7 +500,8 @@ export default function JobsPage() {
               {lastSearched && jobs.length > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                   <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 700, color: cobaltA(0.45), letterSpacing: "0.1em" }}>
-                    {jobs.length} RESULTS · "{lastSearched.kw.toUpperCase()}"{lastSearched.ind !== "both" ? ` · ${lastSearched.ind.toUpperCase()}` : ""} · NEWEST FIRST
+                    {jobs.length} RESULTS{lastSearched.ind && lastSearched.ind !== "both" ? ` · ${lastSearched.ind.toUpperCase()}` : ""} · NEWEST FIRST
+                    {cachedAt && <span style={{ color: B.green, marginLeft: 10 }}>· AUTO-UPDATED {new Date(cachedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>}
                   </span>
                   <div style={{ display: "flex", gap: 14 }}>
                     {[["hot", "< 1h", B.red], ["fresh", "< 24h", B.amber], ["recent", "< 3d", B.green]].map(([f, l, col]) => (
