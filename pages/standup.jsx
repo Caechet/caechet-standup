@@ -211,7 +211,7 @@ function EditableList({ storageKey, title, placeholder }) {
   const add = async () => { if (!input.trim()) return; await save([...items, { id: uid(), text: input.trim(), date: todayStr() }]); setInput(""); };
   const del = async id => await save(items.filter(i => i.id !== id));
   return (
-    <div style={{ background: "#fff", borderRadius: 12, border: `1px solid ${cobaltA(0.12)}`, borderLeft: `4px solid ${B.cobalt}`, boxShadow: "0 1px 4px rgba(32,72,200,0.06)", padding: "18px 22px", marginBottom: 10 }}>
+    <div style={{ background: "#fff", borderRadius: 12, border: `1px solid ${cobaltA(0.12)}`, borderLeft: `4px solid ${B.cobalt}`, boxShadow: "0 1px 4px rgba(32,72,200,0.06)", padding: "18px 22px", marginBottom: 0, display:"flex", flexDirection:"column", height:"100%" }}>
       <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: B.cobalt, textTransform: "uppercase", marginBottom: 14 }}>{title}</div>
       {loaded && items.length === 0 && <div style={{ fontFamily: F.mono, fontSize: 10, color: cobaltA(0.3), marginBottom: 12, fontStyle: "italic" }}>No items yet</div>}
       {items.length > 0 && <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
@@ -224,6 +224,7 @@ function EditableList({ storageKey, title, placeholder }) {
           </div>
         ))}
       </div>}
+      <div style={{ flex: 1 }} />
       <div style={{ display: "flex", gap: 8 }}>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), add())} placeholder={placeholder}
           style={{ flex: 1, background: "#FAFBFF", border: `1px solid ${cobaltA(0.15)}`, borderRadius: 8, padding: "9px 14px", color: B.carbon, fontSize: 12, fontFamily: F.body, outline: "none" }} />
@@ -479,11 +480,22 @@ export default function App() {
                 <div style={{ fontFamily:F.mono, fontSize:9, fontWeight:600, color:bananaA(0.7), letterSpacing:"0.16em", marginTop:5 }}>ADMIN PORTAL · {DATE_LABEL}</div>
               </div>
             </div>
-            <div style={{ display:"flex", gap:28 }}>
-              {[[String(BRANDS.length).padStart(2,"0"),"BRANDS"],[String(WEEKLY.filter(w=>w.s==="deploy").length).padStart(2,"0"),"TODAY"],[String(WEEKLY.length).padStart(2,"0"),"THIS WEEK"]].map(([n,l])=>(
-                <div key={l} style={{ textAlign:"center" }}>
-                  <div style={{ fontFamily:F.display, fontSize: isMobile ? 20 : 26, fontWeight:800, color:B.banana, lineHeight:1 }}>{n}</div>
-                  <div style={{ fontFamily:F.mono, fontSize:8, fontWeight:600, color:bananaA(0.55), letterSpacing:"0.14em", marginTop:2 }}>{l}</div>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {[
+                { n: BRANDS.length, label: "brands", accent: bananaA(0.8) },
+                { n: WEEKLY.filter(w=>w.s==="deploy").length, label: "deploying", accent: WEEKLY.filter(w=>w.s==="deploy").length > 0 ? B.banana : bananaA(0.35), highlight: WEEKLY.filter(w=>w.s==="deploy").length > 0 },
+                { n: WEEKLY.filter(w=>w.s==="blocked").length, label: "blocked", accent: WEEKLY.filter(w=>w.s==="blocked").length > 0 ? "#F87171" : bananaA(0.3), highlight: WEEKLY.filter(w=>w.s==="blocked").length > 0 },
+                { n: WEEKLY.filter(w=>w.s!=="done").length, label: "pending", accent: bananaA(0.5) },
+              ].map(({ n, label, accent, highlight }) => (
+                <div key={label} style={{
+                  display:"flex", alignItems:"center", gap:6,
+                  padding:"5px 11px",
+                  background: highlight ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.18)",
+                  borderRadius:20,
+                  border: `1px solid ${highlight ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.06)"}`,
+                }}>
+                  <span style={{ fontFamily:F.display, fontSize:14, fontWeight:800, color:accent, lineHeight:1 }}>{n}</span>
+                  <span style={{ fontFamily:F.mono, fontSize:8, fontWeight:600, color:bananaA(0.45), letterSpacing:"0.1em", textTransform:"uppercase" }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -495,7 +507,7 @@ export default function App() {
       {/* BODY */}
       <div style={{ maxWidth:1060, margin:"0 auto", padding: isMobile ? "16px 16px 60px" : "32px 48px 80px" }}>
 
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginBottom:4 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginBottom:4, alignItems:"stretch" }}>
           <EditableList storageKey="standup:next-steps" title="Next Steps From Yesterday" placeholder="Items added yesterday appear here for the whole team..." />
           <EditableList storageKey="standup:meeting-announcements" title="Announcements" placeholder="Add an announcement for today's standup..." />
         </div>
