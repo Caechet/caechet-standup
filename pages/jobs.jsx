@@ -7,8 +7,6 @@ const B = {
   cobalt: "#2048C8", cobaltDark: "#0F2F8C", cobaltBright: "#4A74F5",
   banana: "#FCF1B8", carbon: "#0B0B0D", snow: "#FAF9F6",
   red: "#E03333", amber: "#D97706", green: "#16A34A",
-  // sign out button
-  return null;
 };
 const cobaltA = (a) => `rgba(32,72,200,${a})`;
 const bananaA = (a) => `rgba(252,241,184,${a})`;
