@@ -1,14 +1,10 @@
 // pages/api/job-search.js
-// Proxies Claude API calls server-side so ANTHROPIC_API_KEY never touches the browser.
-// Also used as the Make.com webhook endpoint for automated scheduled searches.
+// Called by the manual search bar on /jobs
+// Proxies Claude API server-side so ANTHROPIC_API_KEY never touches the browser
 
 export default async function handler(req, res) {
-  // ── auth check (same cookie pattern as your standup) ─────────────────────
   const cookie = req.headers.cookie || "";
-  const makeToken = req.headers["x-make-token"]; // for Make.com webhook calls
-  const isAuthed = cookie.includes("caechet_auth=1") || makeToken === process.env.MAKE_WEBHOOK_SECRET;
-
-  if (!isAuthed) {
+  if (!cookie.includes("caechet_auth=1")) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -25,7 +21,7 @@ export default async function handler(req, res) {
   try {
     const body = {
       model: "claude-sonnet-4-20250514",
-      max_tokens: 4000,
+      max_tokens: 8000,
       system,
       messages: [{ role: "user", content: userMsg }],
     };
@@ -50,7 +46,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // extract text blocks and parse JSON
     const allText = (data.content || [])
       .filter(b => b.type === "text")
       .map(b => b.text)
@@ -63,16 +58,15 @@ export default async function handler(req, res) {
     const cleaned = allText.replace(/```json|```/g, "").trim();
     const start = cleaned.indexOf("{");
     if (start === -1) {
-      return res.status(500).json({ error: "No JSON in response", raw: allText.slice(0, 200) });
+      return res.status(500).json({ error: "No JSON in response" });
     }
 
     const jsonStr = cleaned.slice(start);
 
     try {
-      const parsed = JSON.parse(jsonStr);
-      return res.status(200).json(parsed);
+      return res.status(200).json(JSON.parse(jsonStr));
     } catch {
-      // salvage partial jobs array if truncated
+      // salvage partial results if response was truncated
       const hits = [];
       const re = /\{[^{}]*"title"[^{}]*\}/g;
       let m;
@@ -82,7 +76,7 @@ export default async function handler(req, res) {
       if (hits.length > 0) {
         return res.status(200).json({ jobs: hits, total: hits.length, query: "", partial: true });
       }
-      return res.status(500).json({ error: "Malformed JSON", raw: allText.slice(0, 200) });
+      return res.status(500).json({ error: "Malformed JSON response" });
     }
   } catch (err) {
     return res.status(500).json({ error: err.message });
