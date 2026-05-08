@@ -46,7 +46,7 @@ export default function IndexPage() {
       <div style={{ padding: "32px 40px 36px" }}>
         <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.22em", color: "rgba(252,241,184,0.4)", marginBottom: 10 }}>INDEX</div>
         <div style={{ fontFamily: "'Archivo',sans-serif", fontWeight: 900, fontSize: 50, letterSpacing: "-0.04em", lineHeight: 1, color: "#fff", marginBottom: 8 }}>
-          {greeting},<br />Daniel.
+          {greeting},<br />team.
         </div>
         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", letterSpacing: "0.08em", fontWeight: 600 }}>
           {stats.deploys > 0 ? `${stats.deploys} DEPLOY${stats.deploys > 1 ? "S" : ""} TODAY` : "NO DEPLOYS TODAY"}
