@@ -79,6 +79,7 @@ export default function IndexPage() {
           </Link>
 
         </div>
+        </div>
       </div>
 
       <div style={{ marginTop: "auto", padding: "18px 40px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between" }}>
