@@ -121,12 +121,12 @@ export default function Login() {
                   transition: "background 0.15s",
                 }}
               >
-                {loading ? "CHECKING..." : "ENTER STANDUP →"}
+                {loading ? "CHECKING..." : "Enter Portal →"}
               </button>
             </form>
 
             <div style={{ marginTop: 24, fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: cobaltA(0.3), letterSpacing: "0.14em", textAlign: "center" }}>
-              STAY DANGEROUS · BE HUMAN
+              STAY DANGEROUS
             </div>
           </div>
         </div>
