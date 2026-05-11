@@ -1,5 +1,5 @@
 // pages/api/job-search.js
-export const config = { runtime: "fluid", maxDuration: 120 };
+export const config = { runtime: "edge", maxDuration: 120 };
 
 export default async function handler(req, res) {
   try {
