@@ -424,10 +424,19 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    fetch("/api/standup")
+    // Try live Notion data first
+    fetch("/api/notion-data")
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (d?.data) { setLiveData(d.data); setDataUpdated(d.date); }
+        if (d?.brands) {
+          setLiveData(d);
+          setDataUpdated(d.generatedAt);
+        } else {
+          // Fall back to Make-generated standup data
+          return fetch("/api/standup")
+            .then(r => r.ok ? r.json() : null)
+            .then(sd => { if (sd?.data) { setLiveData(sd.data); setDataUpdated(sd.date); } });
+        }
       })
       .catch(() => {});
   }, []);
