@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "pages/api/job-search.js": {
+      "maxDuration": 60
+    },
+    "pages/api/job-results.js": {
+      "maxDuration": 60
+    }
+  }
+}
