@@ -132,7 +132,10 @@ async function callClaude(system, userMsg, useSearch = false) {
   } finally {
     clearTimeout(timeout);
   }
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || errData.raw || `API error: ${res.status}`);
+  }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const allText = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
