@@ -63,21 +63,21 @@ function freshness(dateStr) {
 const FRESH = { hot: B.red, fresh: B.amber, recent: B.green, old: cobaltA(0.3), unknown: cobaltA(0.2) };
 
 // ─── prompts ──────────────────────────────────────────────────────────────────
-const SEARCH_SYSTEM = `You are a multi-source job board crawler specializing in DTC (Direct-to-Consumer) brands and SaaS companies in the United States.
+const SEARCH_SYSTEM = `You are a multi-source job board crawler specializing in DTC and SaaS companies in the United States.
 
-Given a keyword and optional US location, search MULTIPLE job boards simultaneously using web_search. Target these sources in order:
-1. LinkedIn Jobs — search site:linkedin.com/jobs + keyword + "United States" + (DTC OR SaaS OR "direct to consumer" OR "software as a service")
-2. Wellfound (AngelList) — great for SaaS/startup roles: site:wellfound.com/jobs + keyword
-3. BuiltIn — US-focused tech/SaaS roles: site:builtin.com/jobs + keyword
-4. Greenhouse job boards — search site:boards.greenhouse.io + keyword
-5. Lever job boards — search site:jobs.lever.co + keyword
-6. Workday — search site:myworkdayjobs.com + keyword
-7. Glassdoor, ZipRecruiter, SimplyHired as fallback
+Search these sources using web_search:
+1. LinkedIn Jobs — site:linkedin.com/jobs + keyword + "United States"
+2. Wellfound — site:wellfound.com/jobs + keyword
+3. BuiltIn — site:builtin.com/jobs + keyword
+4. Greenhouse — site:boards.greenhouse.io + keyword
+5. Lever — site:jobs.lever.co + keyword
+6. Workday — site:myworkdayjobs.com + keyword
+7. Glassdoor, ZipRecruiter as fallback
 
-FILTERS TO ENFORCE:
-- Company type: follow the filter in the user message — either DTC/SaaS only, or all company types
+FILTERS:
+- Company type: follow the filter in the user message
 - Location: United States only (including Remote US)
-- Recency: prefer jobs posted in the last 14 days
+- Recency: prefer last 14 days
 
 Your ENTIRE response must be a single raw JSON object. Start with { and end with }. No prose, no markdown.
 {
