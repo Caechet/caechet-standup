@@ -1,5 +1,5 @@
 // pages/api/job-search.js
-export const config = { maxDuration: 60 };
+export const config = { runtime: "fluid", maxDuration: 120 };
 
 export default async function handler(req, res) {
   try {
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     let finalText = "";
 
     for (let turn = 0; turn < 5; turn++) {
-      const body = { model: "claude-sonnet-4-5", max_tokens: 5000, system, messages };
+      const body = { model: "claude-sonnet-4-5", max_tokens: 4000, system, messages };
       if (tools.length) body.tools = tools;
 
       const r = await fetch("https://api.anthropic.com/v1/messages", {
