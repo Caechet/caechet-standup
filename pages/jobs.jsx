@@ -119,9 +119,20 @@ Your ENTIRE response must be a single raw JSON object. Start with { and end with
 
 // ─── api ──────────────────────────────────────────────────────────────────────
 async function callClaude(system, userMsg, useSearch = false) {
-  const body = { model: "claude-sonnet-4-20250514", max_tokens: 8000, system, messages: [{ role: "user", content: userMsg }] };
-  if (useSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
-  const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90000); // 90s timeout
+  let res;
+  try {
+    res = await fetch("/api/job-search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system, userMsg, useSearch }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const allText = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
