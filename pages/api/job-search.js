@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     let finalText = "";
 
     for (let turn = 0; turn < 5; turn++) {
-      const body = { model: "claude-sonnet-4-5", max_tokens: 3000, system, messages };
+      const body = { model: "claude-sonnet-4-5", max_tokens: 5000, system, messages };
       if (tools.length) body.tools = tools;
 
       const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -71,7 +71,14 @@ export default async function handler(req, res) {
     }
 
     if (!finalText.trim()) {
-      return res.status(500).json({ error: "No text response after tool calls" });
+      // debug — return what we actually got
+      const lastMsg = messages[messages.length - 1];
+      const lastContent = Array.isArray(lastMsg?.content) ? lastMsg.content : [];
+      return res.status(500).json({
+        error: "No text response after tool calls",
+        contentTypes: lastContent.map(b => b.type),
+        turnCount: messages.length,
+      });
     }
 
     const cleaned = finalText.replace(/```json|```/g, "").trim();
