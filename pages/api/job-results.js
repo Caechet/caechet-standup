@@ -1,18 +1,12 @@
 // pages/api/job-results.js
-//
-// POST — Make.com saves results (authenticated via x-make-token)
-// GET  — /jobs page reads results (authenticated via cookie)
-//
-// Uses Upstash Redis for persistent storage across serverless instances.
-
 import { Redis } from "@upstash/redis";
 
-const redis = Redis.fromEnv(); // reads KV_REST_API_URL + KV_REST_API_TOKEN from env
+const redis = Redis.fromEnv();
 const CACHE_KEY = "caechet:job-results";
 
 export default async function handler(req, res) {
 
-  // ── POST: Make.com saves results ─────────────────────────────────────────
+  // ── POST: Make.com saves results ──────────────────────────────────────────
   if (req.method === "POST") {
     const makeToken = req.headers["x-make-token"];
     if (makeToken !== process.env.MAKE_WEBHOOK_SECRET) {
@@ -20,17 +14,29 @@ export default async function handler(req, res) {
     }
 
     try {
-      let jobs = [];
       const body = req.body;
+      let jobs = [];
 
-      if (body.jobs && Array.isArray(body.jobs)) {
-        jobs = body.jobs;
-      } else if (typeof body.jobs === "string") {
-        const cleaned = body.jobs.replace(/```json|```/g, "").trim();
-        const start = cleaned.indexOf("{");
-        if (start !== -1) {
+      // body.jobs is the text content from Anthropic — extract the JSON
+      const raw = typeof body.jobs === "string"
+        ? body.jobs
+        : JSON.stringify(body.jobs || "");
+
+      // Strip markdown fences and find the JSON object
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      const start = cleaned.indexOf("{");
+
+      if (start !== -1) {
+        try {
           const parsed = JSON.parse(cleaned.slice(start));
           jobs = parsed.jobs || [];
+        } catch {
+          // Try salvaging individual job objects
+          const re = /\{[^{}]*"title"[^{}]*\}/g;
+          let m;
+          while ((m = re.exec(cleaned)) !== null) {
+            try { jobs.push(JSON.parse(m[0])); } catch {}
+          }
         }
       }
 
@@ -44,6 +50,7 @@ export default async function handler(req, res) {
       await redis.set(CACHE_KEY, JSON.stringify(payload));
 
       return res.status(200).json({ success: true, count: jobs.length, cachedAt: payload.cachedAt });
+
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
