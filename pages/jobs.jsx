@@ -132,19 +132,8 @@ async function callClaude(system, userMsg, useSearch = false) {
     throw new Error(errData.error || errData.raw || `API error: ${res.status}`);
   }
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  const allText = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
-  if (!allText.trim()) throw new Error("Empty response from API");
-  const cleaned = allText.replace(/```json|```/g, "").trim();
-  const start = cleaned.indexOf("{");
-  if (start === -1) throw new Error("No JSON found");
-  const jsonStr = cleaned.slice(start);
-  try { return JSON.parse(jsonStr); } catch {
-    const hits = []; const re = /\{[^{}]*"title"[^{}]*\}/g; let m;
-    while ((m = re.exec(jsonStr)) !== null) { try { hits.push(JSON.parse(m[0])); } catch {} }
-    if (hits.length) return { jobs: hits, total: hits.length, query: "" };
-    throw new Error("Malformed JSON");
-  }
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 // ─── ui primitives ────────────────────────────────────────────────────────────
