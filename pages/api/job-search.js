@@ -14,95 +14,102 @@ export default async function handler(req) {
     if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
     let body;
-    try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
+    try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
     const { system, userMsg, useSearch = false } = body;
-    if (!system || !userMsg) return json({ error: "Missing system or userMsg" }, 400);
-    if (!process.env.ANTHROPIC_API_KEY) return json({ error: "ANTHROPIC_API_KEY not set" }, 500);
+    if (!system || !userMsg) return json({ error: "Missing fields" }, 400);
+    if (!process.env.ANTHROPIC_API_KEY) return json({ error: "No API key" }, 500);
 
-    const anthropicHeaders = {
+    const headers = {
       "Content-Type": "application/json",
       "x-api-key": process.env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
     };
 
-    const tools = useSearch ? [{ type: "web_search_20250305", name: "web_search" }] : [];
-
-    // agentic loop — handle web search multi-turn (max 5 turns)
+    // Build messages array — start with the user message
     let messages = [{ role: "user", content: userMsg }];
+    const tools = useSearch ? [{ type: "web_search_20250305", name: "web_search" }] : [];
     let finalText = "";
 
-    for (let turn = 0; turn < 5; turn++) {
-      const reqBody = { model: "claude-sonnet-4-5", max_tokens: 2000, system, messages };
-      if (tools.length) reqBody.tools = tools;
+    // Loop up to 8 turns to handle web search tool calls
+    for (let i = 0; i < 8; i++) {
+      const payload = {
+        model: "claude-sonnet-4-5",
+        max_tokens: 2000,
+        system,
+        messages,
+      };
+      if (tools.length) payload.tools = tools;
 
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: anthropicHeaders,
-        body: JSON.stringify(reqBody),
+        headers,
+        body: JSON.stringify(payload),
       });
 
-      if (!r.ok) {
-        const t = await r.text();
-        return json({ error: `Anthropic ${r.status}: ${t.slice(0, 200)}` }, 500);
+      const data = await r.json();
+
+      if (!r.ok || data.error) {
+        return json({ error: data.error?.message || `Anthropic error ${r.status}` }, 500);
       }
 
-      const data = await r.json();
-      if (data.error) return json({ error: data.error.message }, 500);
-
       const content = data.content || [];
-      const textBlocks = content.filter(b => b.type === "text").map(b => b.text);
 
-      if (textBlocks.length > 0) {
-        finalText = textBlocks.join("\n");
+      // Check for text block first
+      const textBlock = content.find(b => b.type === "text");
+      if (textBlock?.text?.trim()) {
+        finalText = textBlock.text;
         break;
       }
 
+      // If stop reason is tool_use, collect tool results and continue
       if (data.stop_reason === "tool_use") {
-        const toolResults = content
-          .filter(b => b.type === "tool_use")
-          .map(b => ({
-            type: "tool_result",
-            tool_use_id: b.id,
-            content: b.input ? JSON.stringify(b.input) : "search completed",
-          }));
-        messages = [
-          ...messages,
-          { role: "assistant", content },
-          { role: "user", content: toolResults },
-        ];
+        const toolUseBlocks = content.filter(b => b.type === "tool_use");
+        const toolResultBlocks = content.filter(b => b.type === "tool_result");
+
+        // Add assistant turn
+        messages = [...messages, { role: "assistant", content }];
+
+        // Build tool results for next user turn
+        const results = toolUseBlocks.map(b => ({
+          type: "tool_result",
+          tool_use_id: b.id,
+          content: toolResultBlocks.find(r => r.tool_use_id === b.id)?.content
+            || "Search completed. Please now compile the job results into the required JSON format.",
+        }));
+
+        if (results.length === 0) break;
+        messages = [...messages, { role: "user", content: results }];
         continue;
       }
 
+      // Any other stop reason — break
       break;
     }
 
-    if (!finalText.trim()) {
-      const lastContent = Array.isArray(messages[messages.length - 1]?.content)
-        ? messages[messages.length - 1].content : [];
-      return json({
-        error: "No text response after tool calls",
-        contentTypes: lastContent.map(b => b.type),
-        turns: messages.length,
-      }, 500);
+    if (!finalText) {
+      return json({ error: "No text response from Claude", hint: "Try a simpler keyword" }, 500);
     }
 
+    // Extract JSON from the text
     const cleaned = finalText.replace(/```json|```/g, "").trim();
     const start = cleaned.indexOf("{");
-    if (start === -1) return json({ error: "No JSON found", raw: finalText.slice(0, 200) }, 500);
+    if (start === -1) return json({ error: "No JSON in response", raw: finalText.slice(0, 300) }, 500);
 
     try {
       return json(JSON.parse(cleaned.slice(start)));
     } catch {
+      // Try to salvage partial job objects
       const hits = [];
       const re = /\{[^{}]*"title"[^{}]*\}/g;
       let m;
       while ((m = re.exec(cleaned)) !== null) {
         try { hits.push(JSON.parse(m[0])); } catch {}
       }
-      if (hits.length > 0) return json({ jobs: hits, total: hits.length, query: "", partial: true });
-      return json({ error: "Malformed JSON", raw: finalText.slice(0, 200) }, 500);
+      if (hits.length > 0) return json({ jobs: hits, total: hits.length, query: "" });
+      return json({ error: "Malformed JSON", raw: finalText.slice(0, 300) }, 500);
     }
+
   } catch (err) {
     return json({ error: err.message || "Unknown error" }, 500);
   }
