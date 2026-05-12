@@ -33,7 +33,7 @@ export default async function handler(req) {
     let finalText = "";
 
     for (let turn = 0; turn < 5; turn++) {
-      const reqBody = { model: "claude-sonnet-4-5", max_tokens: 4000, system, messages };
+      const reqBody = { model: "claude-sonnet-4-5", max_tokens: 2000, system, messages };
       if (tools.length) reqBody.tools = tools;
 
       const r = await fetch("https://api.anthropic.com/v1/messages", {
