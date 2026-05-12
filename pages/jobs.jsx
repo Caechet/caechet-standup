@@ -63,16 +63,11 @@ function freshness(dateStr) {
 const FRESH = { hot: B.red, fresh: B.amber, recent: B.green, old: cobaltA(0.3), unknown: cobaltA(0.2) };
 
 // ─── prompts ──────────────────────────────────────────────────────────────────
-const SEARCH_SYSTEM = `You are a multi-source job board crawler specializing in DTC and SaaS companies in the United States.
+const SEARCH_SYSTEM = `You are a job board crawler for DTC and SaaS companies in the United States.
 
-Search these sources using web_search:
-1. LinkedIn Jobs — site:linkedin.com/jobs + keyword + "United States"
-2. Wellfound — site:wellfound.com/jobs + keyword
-3. BuiltIn — site:builtin.com/jobs + keyword
-4. Greenhouse — site:boards.greenhouse.io + keyword
-5. Lever — site:jobs.lever.co + keyword
-6. Workday — site:myworkdayjobs.com + keyword
-7. Glassdoor, ZipRecruiter as fallback
+Do exactly 2 web searches:
+Search 1: keyword + jobs site:linkedin.com/jobs OR site:wellfound.com/jobs "United States"
+Search 2: keyword + jobs site:boards.greenhouse.io OR site:jobs.lever.co "United States"
 
 FILTERS:
 - Company type: follow the filter in the user message
