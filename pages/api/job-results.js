@@ -3,12 +3,11 @@
 // POST — Make.com saves results (authenticated via x-make-token)
 // GET  — /jobs page reads results (authenticated via cookie)
 //
-// Uses Vercel KV for persistent storage across serverless instances.
-// Setup: vercel.com/dashboard → your project → Storage → Create KV Database
-// Then run: vercel env pull (to get KV env vars locally)
+// Uses Upstash Redis for persistent storage across serverless instances.
 
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 
+const redis = Redis.fromEnv(); // reads KV_REST_API_URL + KV_REST_API_TOKEN from env
 const CACHE_KEY = "caechet:job-results";
 
 export default async function handler(req, res) {
@@ -42,9 +41,7 @@ export default async function handler(req, res) {
       });
 
       const payload = { jobs, cachedAt: new Date().toISOString(), total: jobs.length };
-
-      // persist to KV — survives cold starts and redeployments
-      await kv.set(CACHE_KEY, payload);
+      await redis.set(CACHE_KEY, JSON.stringify(payload));
 
       return res.status(200).json({ success: true, count: jobs.length, cachedAt: payload.cachedAt });
     } catch (err) {
@@ -60,8 +57,9 @@ export default async function handler(req, res) {
     }
 
     try {
-      const data = await kv.get(CACHE_KEY);
-      if (!data) return res.status(200).json({ jobs: [], total: 0, cachedAt: null, fresh: false });
+      const raw = await redis.get(CACHE_KEY);
+      if (!raw) return res.status(200).json({ jobs: [], total: 0, cachedAt: null, fresh: false });
+      const data = typeof raw === "string" ? JSON.parse(raw) : raw;
       return res.status(200).json({ ...data, fresh: data.jobs?.length > 0 });
     } catch (err) {
       return res.status(500).json({ error: err.message });
